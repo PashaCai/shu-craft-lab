@@ -1,0 +1,10 @@
+node_modules/
+.sites-runtime/
+qa/
+*.zip
+.openai/
+.env
+.env.*
+*.log
+.DS_Store
+Thumbs.db

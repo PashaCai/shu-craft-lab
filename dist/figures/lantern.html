@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>自贡彩灯 · 莲花灯</title></head><body>
+<script src="../assets/core.js"></script>
+<script>
+/*
+ * 自贡小型莲花灯教学模型。中国彩灯博物馆《裱糊技艺》记载工匠按设计分色裱糊，
+ * 完成后装饰边角和饰件、喷涂或描绘。https://www.lantern-museum.cn/product/2084114740.html
+ * 这里把竹篾扎制与当代低压 LED 组合成一盏可供拆看的案头灯。
+ * 底座：八方漆木座、金边、束腰、立柱、托盘；骨架：环箍、放射撑、内外层花瓣篾圈及中肋；
+ * 灯面：分瓣裱糊的彩绸、描金瓣脉、萼片、莲蓬罩；照明：灯座、LED、引线与外置电池盒。
+ * 弯扎骨架 → 绸面沿各瓣根向尖端贴合 → 描绘瓣脉 → 点亮灯芯。
+ */
+(() => {
+  const ox = 46, oy = 40, deck = 2.5, tau = 2 * Math.PI;
+  const jade = {l:'#71b398',m:'#438c79',d:'#28574e'};
+  const lacquer = {l:'#357865',m:'#26594e',d:'#213e39'};
+  const redwood = {l:'#bc6c47',m:'#995137',d:'#6a3c2e'};
+  const gold = {l:'#f7cb70',m:'#dba353',d:'#986d3b'};
+  const cane = '#edbf77', paper = {l:'#e9cf9d',m:'#c7aa77',d:'#9c815a'};
+  const stepNames = ['扎制骨架','分色裱糊','描绘花脉','点亮花灯'];
+  const lim = n => Math.max(0, Math.min(1, n));
+  const span = (n, fn) => Array.from({length:n+1}, (_,i) => fn(i/n));
+  const polar = (angle,r,z,v=0) => [ox+r*Math.cos(angle)-v*Math.sin(angle),oy+r*Math.sin(angle)+v*Math.cos(angle),z];
+  const shift = (p,d) => p.map((v,i) => v+d[i]);
+  const ring = (r,z,n=8,turn=Math.PI/8) => Array.from({length:n},(_,i)=>polar(turn+i*tau/n,r,z));
+  const bounds = pts => [Math.min,Math.max].map(fx => [0,1,2].map(i=>fx(...pts.map(p=>p[i]))));
+  const item = (pts,svg,at) => ({box:bounds(pts),at:at||avg(pts),svg});
+  function assembly(parts){
+    const envelope=bounds(parts.flatMap(part=>part.box));
+    return {box:envelope,at:boxMid(envelope),svg:byDepth(parts)};
+  }
+  const stroke = (pts,col,w) => '<path d="'+pd(pts,false)+'" fill="none" stroke="'+col+'" stroke-width="'+w+'" stroke-linecap="round" stroke-linejoin="round"/>';
+  const piping = (pts,col,w) => line(pts,w+1.1)+stroke(pts,col,w);
+  function bead(at,r,col){
+    const p=P(...at), rr=r*1.225;
+    return '<circle cx="'+f(p[0])+'" cy="'+f(p[1])+'" r="'+f(rr)+'" fill="'+col+'" stroke="'+INK+'" stroke-width=".85"/>'+
+      '<circle cx="'+f(p[0]-.31*rr)+'" cy="'+f(p[1]-.33*rr)+'" r="'+f(rr*.23)+'" fill="#fff2c5"/>';
+  }
+  function oct(parts,z0,z1,r0,r1,material,adorn=false){
+    const a=ring(r0,z0),b=ring(r1,z1);
+    let s=loft(a,b,n=>tone(n,material))+shape(b,material.l,.9);
+    if(adorn){
+      for(let i=0;i<8;i++){
+        const ang=(i+1)*tau/8, normal=[Math.cos(ang),Math.sin(ang),0];
+        if(!vis(normal)) continue;
+        const r=(r0+r1)/2*Math.cos(Math.PI/8)+.08, half=(r0+r1)/2*Math.sin(Math.PI/8);
+        const rel=(u,v)=>polar(ang,r,z0+(z1-z0)*v,u*half);
+        const linework=[[-.82,.22],[-.82,.72],[-.42,.72],[-.42,.48],[-.65,.48],[-.65,.31],[-.24,.31],[0,.67],[.24,.31],[.65,.31],[.65,.48],[.42,.48],[.42,.72],[.82,.72],[.82,.22]].map(([u,v])=>rel(u,v));
+        s+=stroke(linework,'#f7d48d',1.2);
+      }
+    }
+    parts.push(item([...a,...b],s+hullInk([...a,...b],2.4)));
+  }
+  function lampStand(parts){
+    oct(parts,deck,4.6,18.8,19.8,lacquer);
+    oct(parts,4.6,5.7,19.8,20.4,gold);
+    oct(parts,5.7,7.6,20.4,18.4,redwood);
+    oct(parts,7.6,12.5,17.8,17.8,lacquer,true);
+    oct(parts,12.5,14.2,18.1,19.4,gold);
+    oct(parts,14.2,16.3,19.6,16.4,jade);
+    oct(parts,16.3,19.8,9.1,7.8,redwood);
+    oct(parts,19.8,21.7,8.2,10.6,gold);
+    oct(parts,21.7,24.5,10.6,13.6,lacquer);
+  }
+  // A petal's midrib bows outward. Its curled sides and normal follow the same surface as its fabric and paint.
+  const tiers = [
+    {count:8, angle:.12, root:8, reach:29, height:24, base:24, width:10.9, bow:4.3, flare:8.4},
+    {count:6, angle:.47, root:5.2, reach:16.2, height:36, base:25.4, width:9.1, bow:7.2, flare:6.8},
+    {count:7, angle:.55, root:6.5, reach:20.8, height:5.8, base:22.6, width:6.3, bow:1.8, flare:3.3}
+  ];
+  function petalPoint(layer,angle,t,u,offset=0,lift=0){
+    const g=tiers[layer], bulge=Math.sin(t*Math.PI), fan=Math.sin(Math.PI*t**1.02);
+    const width=g.width*(Math.max(0,fan)**.86+.095*(1-t));
+    const r=g.root+g.reach*t+g.bow*bulge-g.flare*u*u*bulge*.42+offset;
+    const z=g.base+g.height*t-4.4*bulge+g.flare*u*u*bulge*.57+lift;
+    return polar(angle,r,z,u*width);
+  }
+  function renderPetal(layer,angle,amount,offset,lift,palette,paint,opacity){
+    const end=Math.max(.012,amount), surface=(t,u)=>petalPoint(layer,angle,t,u,offset,lift);
+    const curve=(u,t0=0,t1=end)=>span(10,s=>surface(t0+(t1-t0)*s,u));
+    const selvedge=[...curve(-1),...curve(1).reverse()], silhouette=[...selvedge,...curve(0)];
+    let s=fill(pd(selvedge),palette.m);
+    // Narrow facets curve with the silk. Sort strips within the petal as it turns edge-on.
+    const strips=[];
+    const cuts=[-1,-.62,-.10,.55,1];
+    for(let i=0;i<cuts.length-1;i++){
+      const a=cuts[i],b=cuts[i+1], u=(a+b)*.5;
+      const p0=surface(.5,u), nr=norm(cross(sub(surface(.51,u),p0),sub(surface(.5,u+.02),p0)));
+      const n=vis(nr)?nr:nr.map(v=>-v);
+      const pts=[...curve(a),...curve(b).reverse()];
+      const toned=toneI(n,palette);
+      const color=i===0?mix(toned,palette.d,.16):i===2?mix(toned,palette.l,.26):toned;
+      strips.push(item(pts,face(pd(pts),color),surface(end*.52,u)));
+    }
+    s+=byDepth(strips)+ink(pd(selvedge),1.55);
+    if(paint>.016){
+      const endPaint=end*Math.max(.016,paint), inkCol=layer===2?'#406e55':mix(palette.d,'#9a463b',.31);
+      const shaft=span(13,t=>surface(.045*endPaint+.9*t*endPaint,0));
+      s+=stroke(shaft,inkCol,.88);
+      if(layer!==2){
+        // Three pairs of fine, tapering brush marks share the sweep of the main vein.
+        for(const side of [-1,1]){
+          for(const [start,stop,target] of [[.12,.63,.74],[.25,.78,.66],[.46,.89,.52]]){
+            if(endPaint<=start)continue;
+            const finish=Math.min(endPaint,stop), length=finish-start;
+            const branch=span(9,j=>{const t=start+j*length, v=(t-start)/(stop-start);return surface(t, side*target*(1-(1-v)**1.8));});
+            s+=stroke(branch,mix(inkCol,palette.l,.36),.59);
+          }
+          const seam=span(14,k=>{const t=.065*endPaint+.90*k*endPaint;return surface(t,side*.91);});
+          s+=stroke(seam,'#ffd897',.85);
+        }
+      }
+    }
+    return item(silhouette,'<g opacity="'+f(opacity)+'">'+s+'</g>',surface(end*.60,0));
+  }
+  function petalFrame(layer,angle,amount,offset,lift){
+    const surface=(t,u)=>petalPoint(layer,angle,t*amount,u,offset,lift);
+    const paths=[-1,0,1].map(u=>span(12,k=>surface(k,u)));
+    let s=paths.map((p,i)=>piping(p,i===1?'#cc9352':cane,i===1?1.07:1.4)).join('');
+    for(const t of [.36,.65]) if(amount>t){
+      const brace=span(6,u=>surface(t/amount,2*u-1)); s+=piping(brace,'#c99d64',.65);
+    }
+    return item(paths.flat(),s,surface(.58,0));
+  }
+  function segment(parts,a,b,r,material,w=.85,rEnd=r){
+    const sz=Math.max(r,rEnd),pts=[a,b].flatMap(p=>[p.map(v=>v-sz),p.map(v=>v+sz)]);
+    parts.push(item(pts,rod(a,b,r,material,toneI,w,rEnd,12)));
+  }
+  function cylinder(parts,x,y,z0,z1,r,material,w=1.0,n=18){
+    const coords=[[x-r,y-r,z0],[x+r,y+r,z1]];
+    parts.push(item(coords,cyl(x,y,z0,z1,r,material,toneI,w,n)));
+  }
+  function globe(parts,explode,frame,light,cloth,xray){
+    const z=24.5+12*explode, socketOffset=25*explode;
+    cylinder(parts,ox,oy,z,z+2.4,4.7,lacquer);
+    if(frame<.02)return;
+    for(let i=0;i<8;i++){
+      const a=i*tau/8;
+      const rim=span(5,t=>polar(a+t*tau/8,8,z+.8));
+      parts.push(item(rim,piping(rim,cane,1.6)));
+      const base=polar(a,3.8,z+.5),tip=polar(a,8,z+.8);
+      segment(parts,base,tip,.43,gold,.45);
+      if(xray>.01||explode>.01||cloth<.99){
+        // The upper hoop cradles the diffuser. Thin uprights join it to the lower collar.
+        const height=13*frame;
+        const rim=span(5,t=>polar(a+t*tau/8,5.8,z+.8+height));
+        parts.push(item(rim,piping(rim,cane,1.17)));
+        if(i%2===0)segment(parts,tip,polar(a,5.8,z+.8+height),.41,gold,.45);
+      }
+    }
+    const baseHeight=z+1.7, lampZ=baseHeight+socketOffset;
+    cylinder(parts,ox,oy,lampZ,lampZ+13.8,1.1,METAL,.7,12);
+    cylinder(parts,ox,oy,lampZ+13.8,lampZ+15.9,2.3,lacquer,.75,14);
+    const led=[ox,oy,lampZ+17.0], ledColor=mix('#e1d6b7','#ffe77a',light);
+    parts.push(item([shift(led,[-2.1,-2.1,-2.1]),shift(led,[2.1,2.1,2.1])],bead(led,2.1,ledColor)));
+    const globeOffset=22*explode, capBase=z+11+globeOffset;
+    if(cloth>.01){
+      const bulbRings=[[0,2.2],[2,5],[5.9,7.6],[10.9,7.9],[14,5.4],[14.8,3.5]];
+      const warm={l:mix('#f4c365','#fff3a1',light),m:mix('#e5a546','#ffce65',light),d:mix('#b4783d','#ef9b4f',light)};
+      const pieces=[];
+      for(let i=0;i<bulbRings.length-1;i++){
+        const [za,ra]=bulbRings[i],[zb,rb]=bulbRings[i+1], A=ring(ra,capBase+za,12),B=ring(rb,capBase+zb,12);
+        const s=loft(A,B,n=>toneI(n,warm));
+        pieces.push(item([...A,...B],s));
+      }
+      const all=bulbRings.flatMap(([zz,rr])=>ring(rr,capBase+zz,12));
+      let s=byDepth(pieces)+shape(ring(3.5,capBase+14.8,12),warm.l,.65)+hullInk(all,1.9);
+      for(let i=0;i<6;i++){
+        const ang=tau*i/6+Math.PI/8; if(!vis([Math.cos(ang),Math.sin(ang),0]))continue;
+        s+=stroke(bulbRings.map(([zz,rr])=>polar(ang,rr,capBase+zz)),'#a66d38',.65);
+      }
+      parts.push(item(all,'<g opacity="'+(cloth*(1-.91*xray)).toFixed(3)+'">'+s+'</g>'));
+      // Filaments are attached to the lantern's upper cup; gilded knobs outline the lotus seedpod.
+      for(let i=0;i<8;i++){
+        const a=i*tau/8+.2, lower=polar(a,4.5,capBase+3.9),upper=polar(a,8.8,capBase+11.6+(i%2)*1.1);
+        const pos=[lower,polar(a,7.2,capBase+7.0),upper];
+        parts.push(item(pos,'<g opacity="'+(cloth*(1-.72*xray)).toFixed(3)+'">'+piping(pos,'#eab755',1.25)+bead(upper,1.16,'#ffd479')+'</g>'));
+      }
+    }
+    return led;
+  }
+  function supplies(parts,pal,frame,cloth,paint,exam){
+    const bottom=deck+.18;
+    // Rolls of coloured silk on small wooden cores beside the cut piece.
+    const roll=(x,y0,y1,r,material)=>{
+      const a=[x,y0,bottom+r],b=[x,y1,bottom+r];
+      segment(parts,[x,y0-.9,a[2]],[x,y1+.9,b[2]],.87,paper,.6);
+      segment(parts,a,b,r,material,1.4);
+      const normal=[0,CAM_V[1]>=0?1:-1,0], y=normal[1]>0?y1+.03:y0-.03;
+      const spiral=span(42,t=>[x+(.9+t*(r-1.0))*Math.cos(2.9*tau*t),y,bottom+r+(.9+t*(r-1.0))*Math.sin(2.9*tau*t)]);
+      parts.push(item(spiral,stroke(spiral,mix(material.d,'#5e4235',.35),.68)));
+    };
+    const clothShape=[[74,17,bottom],[81,15.6,bottom],[86.2,22.5,bottom],[88,31,bottom],[77.1,30,bottom],[74.8,24.5,bottom]];
+    parts.push(item(clothShape,shape(clothShape,mix(pal.l,'#fff0ce',.20),1)+stroke([[75.4,18,bottom],[78,23.7,bottom],[80.5,29.3,bottom]],pal.m,.78)));
+    roll(83.2,13.2,28.6,2.55-.30*cloth,pal);
+    roll(89.3,16.4,30.6,2.1,jade);
+    // A bamboo-handled lining brush with a brass ferrule; spare splints are tied in a bundle.
+    const brushA=[80.5,35.0,bottom+1], brushB=[81.1,49,bottom+.9], brTip=[81.55,55.4,bottom+.35];
+    segment(parts,brushA,brushB,.75,redwood,.7,.92);
+    segment(parts,brushB,[81.27,51.3,bottom+.8],1,gold,.7);
+    segment(parts,[81.27,51.3,bottom+.8],brTip,1.05,paint>.1?redwood:DARK,.7,.12);
+    const number=frame>.96&&!exam?3:5;
+    for(let i=0;i<number;i++){
+      const a=[86.3+i*.91,37-i*.2,bottom+.48],b=[85.7+i*1.08,56+(i%3),bottom+.48];
+      segment(parts,a,b,.39,gold,.38,.29);
+    }
+    const tie=[[85.9,42.2,bottom+.5],[86,41.8,bottom+1.1],[86.1+number*.96,41.8,bottom+1.0],[86.1+number*.96,42.3,bottom+.3]];
+    parts.push(item(tie,piping(tie,'#a75a43',.85)));
+  }
+  function lampBattery(parts,explode,light){
+    const dx=-9*explode,dy=6*explode;
+    const x=13+dx,y=22+dy,h=deck+3.2;
+    const corners=[[x-4,y-7,deck],[x+4,y+7,h]];
+    const topBox=box(...corners[0],...corners[1],lacquer,toneI,1.05);
+    parts.push(item(corners,topBox+shape(on(PZ(h+.05),rectUV(x-2.75,y-3.4,x+2.75,y+3.4)),jade.l,.7)+
+      shape(on(PZ(h+.08),rectUV(x-1.9,y-1.5+1.2*light,x+1.9,y+.55+1.2*light)),gold.l,.6)));
+    const cable=[[x+3.9,y+3.3,deck+1.6],[x+6,y+3.4,deck+.65],[x+10,y+6,deck+.65],[x+12,y+8,deck+.65],[ox-15,oy-5,deck+.65],[ox-12,oy-3,5.1]];
+    for(let i=1;i<cable.length;i++)parts.push(item([cable[i-1],cable[i]],piping([cable[i-1],cable[i]],'#576459',1.55)));
+    return cable[3];
+  }
+  function draw(st,selected){
+    const preview=st.preview, amount=preview?4:st.progress*4;
+    const frame=lim(amount),cloth=lim(amount-1),paint=lim(amount-2),light=preview?.78:lim(amount-3);
+    const exploded=ease(lim(st.explode||0)),xray=ease(lim(st.xr||0));
+    const silk={l:mix(selected.l,'#fff1d7',.14+.18*light),m:mix(selected.m,'#ffd4aa',.09+.13*light),d:mix(selected.d,selected.m,.44+.10*light)};
+    const inner={l:mix(silk.l,'#fff4d6',.36),m:mix(silk.m,'#ffe8bf',.26),d:mix(silk.d,silk.m,.34)};
+    const parts=[],stand=[],table=[],lampCore=[],labels=[],shadowPts=ring(20,7,12);
+    const top=boardTop(0,0,96,78,deck,4.7);
+    lampStand(stand);
+    const cableAt=lampBattery(table,exploded,light);
+    supplies(table,silk,frame,cloth,paint,preview);
+    const ledAt=globe(lampCore,exploded,frame,light,cloth,xray);
+    parts.push(assembly(lampCore));
+    if(frame>.01){
+      const wireBase=24.5+12*exploded+1.7,wireTop=wireBase+16+25*exploded;
+      if(xray>.02||exploded>.02||cloth<1){
+        const route=[[ox-2.2-8*exploded,oy,wireBase-.5],[ox-1.05-8*exploded,oy,wireBase+1.4],[ox-1.05-8*exploded,oy,wireTop-2],[ox-8*exploded,oy,wireTop]];
+        for(let i=1;i<route.length;i++)parts.push(item([route[i-1],route[i]],piping([route[i-1],route[i]],'#a4674d',.91)));
+      }
+    }
+    let sampleSkeleton,sampleSilk;
+    for(const layer of [2,0,1]){
+      const g=tiers[layer],m=layer===2?jade:layer===1?inner:silk;
+      for(let i=0;i<g.count;i++){
+        const a=g.angle+i*tau/g.count,phase=(i/g.count)*.58+(layer===1?.13:0);
+        const rib=lim((frame-phase)/(.99-phase)), sheet=lim((cloth-phase)/(.99-phase)),decor=lim((paint-i/g.count*.45)/.54);
+        const wireR=exploded*(layer===2?0:2),wireLift=exploded*(layer===2?7:12),clothR=exploded*(layer===2?6:layer===1?12:14),clothLift=exploded*(layer===2?11:layer===1?27:20);
+        if(rib>.014&&(sheet<.998||xray>.015||exploded>.015)){
+          const p=petalFrame(layer,a,rib,wireR,wireLift);parts.push(p);
+          if(layer===0&&i===0)sampleSkeleton=petalPoint(layer,a,rib*.72,0,wireR,wireLift);
+        }
+        if(sheet>.012){
+          parts.push(renderPetal(layer,a,sheet,clothR,clothLift,m,decor,1-.91*xray));
+          if(layer===0&&i===4)sampleSilk=petalPoint(layer,a,sheet*.8,0,clothR,clothLift);
+        }
+        if(rib>.015&&layer===0)shadowPts.push(petalPoint(layer,a,rib,0,wireR,wireLift));
+      }
+    }
+    const wood=board(0,0,96,78,deck,4.7,paper);
+    const shadows=castShadow(shadowPts,deck,top)+castShadow([[80,13,deck],[92,17,5.2],[90,32,5.8],[81,29,7.2]],deck,top);
+    // The plinth and the blossom share one vertical axis. Sorting their individual
+    // pieces against a distant brush creates contradictory x/y and z comparisons.
+    // Resolve each assembly first, then sort the complete lantern among the tools.
+    table.push(assembly([assembly(stand),assembly(parts)]));
+    let s=wood+shadows+byDepth(table);
+    if(xray>.52||exploded>.45){
+      labels.push({at:polar(0,17,10.1),text:'八方灯座'},{at:cableAt,text:'低压引线'});
+      if(sampleSkeleton)labels.push({at:sampleSkeleton,text:'竹篾骨架',on:st.busy===1});
+      if(sampleSilk)labels.push({at:sampleSilk,text:'花瓣绸面',on:st.busy===2});
+      if(ledAt)labels.push({at:ledAt,text:'LED 灯珠',on:light>.5});
+      s+=xrCallouts(labels,[ox-31,ox+31,oy-25,oy+25,4,76]);
+    }
+    return s;
+  }
+  function reset(st){
+    st.runId++;st.preview=false;st.step=0;st.progress=0;st.busy=0;st.done=false;
+  }
+  function work(which,st,ui){
+    if(st.busy){ui.flash('这一道工序正在进行');return;}
+    if(which!==st.step+1){
+      ui.flash(st.done?'莲花灯已点亮，可重新制作':which<st.step+1?'这道工序已完成':'请先'+stepNames[st.step]);return;
+    }
+    st.preview=false;st.busy=which;
+    const id=++st.runId, duration=[1.15,1.19,1.04,.85][which-1];let time=0;
+    ui.animate(dt=>{
+      if(id!==st.runId)return false;
+      time=Math.min(1,time+dt/duration);st.progress=(which-1+ease(time))/4;
+      if(time<1)return true;
+      st.step=which;st.busy=0;st.done=which===4;
+      if(st.done)ui.flash('莲花灯已点亮');
+      return false;
+    });
+  }
+  const cfg={
+    fig:'04',title:'自贡彩灯 · 莲花灯',size:[96,78,76],center:[48,39],turn:'full',palette:'blush',credit:false,
+    state:{preview:true,progress:0,step:0,done:false,explode:0,xr:0,xrT:0,busy:0,runId:0},
+    scene:draw,stats:st=>[{label:'制灯工序',value:st.step+' / 4'}],
+    readout:st=>st.preview?'莲花灯成品 · 可从扎制骨架开始':st.done?'莲花灯已点亮':st.busy?stepNames[st.busy-1]:'接下来 · '+stepNames[st.step],
+    buttons:[...stepNames.map((label,index)=>({label,onClick:(st,ui)=>work(index+1,st,ui)})),{label:'重新制作',onClick:(st,ui)=>{reset(st);ui.flash('已备好材料，可开始扎制骨架');}}],
+    params:(st,q)=>{
+      if(q.has('step')){const value=Number(q.get('step'));st.step=Number.isFinite(value)?Math.max(0,Math.min(4,Math.floor(value))):0;st.preview=false;st.progress=st.step/4;st.done=st.step===4;}
+      if(q.has('explode'))st.explode=lim(Number(q.get('explode'))||0);
+    }
+  };
+  const ui=mountFigure(cfg);
+  window.heritageUI=ui;window.heritageId='lantern';
+  xrMount(()=>ui,()=> '');
+  if(window.parent===window){
+    const toggle=document.createElement('button');
+    toggle.className='act';toggle.textContent='拆解部件';
+    let target=Math.round(ui.st.explode), running=false;
+    toggle.setAttribute('aria-pressed',String(!!target));
+    toggle.onclick=()=>{
+      target=1-target;toggle.setAttribute('aria-pressed',String(!!target));
+      if(running)return;
+      running=true;
+      ui.animate(dt=>{
+        const delta=target-ui.st.explode;
+        ui.st.explode+=Math.sign(delta)*Math.min(Math.abs(delta),dt/.7);
+        running=ui.st.explode!==target;
+        return running;
+      });
+    };
+    document.querySelector('.vrow').appendChild(toggle);
+  }
+})();
+</script>
+<script src="../assets/figure-bridge.js"></script>
+</body></html>

@@ -1,0 +1,139 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>蜀锦织造 · 花楼织机</title></head><body>
+<script src="../assets/core.js"></script><script>
+/* Teaching model of a drawloom, not a full-scale historical reconstruction.
+   Source: https://www.ihchina.cn/project_details/21921
+   Warp beam → two representative groups of heddles, raised by cords → open shed; a boat
+   shuttle carries a silk bobbin across the shed; the reed packs the pick. Repeating this
+   cycle builds coloured floats in the fabric. The patterned leading piece shows prior picks.
+   Structure: four lower posts, sills, braces, side rails, drawloom tower, platform and seat.
+   Mechanism: warp beam, cloth beam with journals, lifting bars, harness cords, heddle eyes,
+   two treadles, swinging reed, warp, shuttle race, boat/wound bobbin, cloth and fringe. */
+const jinWood={l:'#cf9b69',m:'#a96c48',d:'#77513d'},jinHoney={l:'#f4ce92',m:'#d69c62',d:'#8c623e'},jinBrass=matOf('#d7a854');
+const jinNames=['张紧经线','提综开口','投梭引纬','打纬成锦'];
+const jinFresh=()=>({progress:0,step:0,done:false,busy:false,phase:0,t:0,epoch:0});
+const jinAmt=(st,n)=>st.step>=n?1:st.phase===n?st.t:0;
+const jinVec=(a,b)=>a.map((v,i)=>v+b[i]);
+const jinBounds=(p,r=0)=>[0,1].map(h=>[0,1,2].map(i=>(h?Math.max:Math.min)(...p.map(q=>q[i]))+(h?r:-r)));
+const jinPath=(p,col,w)=>'<path d="'+pd(p,false)+'" fill="none" stroke="'+col+'" stroke-width="'+w+'" stroke-linejoin="round" stroke-linecap="round"/>';
+function jinPattern(pt,len,width,finished){
+  // Woven repeat: grid-aligned diamonds, contrasting floats, narrow selvedges.
+  let d='', coords=(u,v)=>pt(u,v),poly=(uv,c)=>fill(pd(uv.map(([u,v])=>coords(u,v))),c);
+  const inkc='#283e51', teal='#468580', mad='#b7473f',gold='#f3c66e',cream='#f7e5af';
+  d+=poly([[0,0],[len,0],[len,width],[0,width]],mad);
+  for(const [v,w,c] of [[0,1.2,inkc],[1.2,.7,cream],[2,1.3,teal],[width-3.3,1.3,teal],[width-1.9,.7,cream],[width-1.2,1.2,inkc]])
+    d+=poly([[0,v],[len,v],[len,v+w],[0,v+w]],c);
+  const diamond=(u,v,rx,ry,c)=>{d+=poly([[u-rx,v],[u,v+ry],[u+rx,v],[u,v-ry]],c);};
+  let n=0;for(let u=3.3;u<len-2.1;u+=6.1){ for(let v=7.5;v<width-5;v+=9.3){
+    diamond(u,v,2.9,4.5,((n+Math.round(v))%2)?gold:teal);diamond(u,v,2.25,3.35,inkc);diamond(u,v,1.2,1.95,cream);
+    if(n%2===0)diamond(u,v,.54,.82,mad);
+  } n++; }
+  for(let u=.65;u<len;u+=1.28) d+=jinPath([coords(u,.5),coords(u,width-.5)],'#eed89b',.36).replace('fill="none"','opacity=".34" fill="none"');
+  return d;
+}
+function jinScene(st,m){
+ const parts=[], ex=ease(Math.min(1,Math.max(0,st.explode||0))),xr=ease(st.xr||0);
+ const lacquer={l:mix(jinHoney.l,m.l,.69),m:mix(jinWood.m,m.m,.62),d:mix(jinWood.d,m.d,.55)};const g={base:[0,0,0],tower:[-5*ex,0,11*ex],harness:[0,-6*ex,7*ex],reed:[6*ex,0,3*ex],warp:[0,0,1.5*ex],boat:[5*ex,10*ex,9*ex],roll:[8*ex,0,0],rear:[-8*ex,0,2*ex]};
+ const add=(pts,svg,op=1,r=0)=>{const bb=jinBounds(pts,r);parts.push({at:boxMid(bb),box:bb,svg:op<1?'<g opacity="'+f(op)+'">'+svg+'</g>':svg});};
+ const at=(p,k)=>jinVec(p,g[k||'base']);
+ const bx=(a,b,mat,k,op=1,w=1.4)=>{a=at(a,k);b=at(b,k);add([a,b],box(...a,...b,mat,tone,w),op);};
+ const rr=(a,b,r,mat,k,op=1,r1=r,w=1.05)=>{a=at(a,k);b=at(b,k);add([a,b],rod(a,b,r,mat,tone,w,r1,12),op,Math.max(r,r1)*.8);};
+ const thread=(p,k,c,w,opacity=1)=>{p=p.map(q=>at(q,k));add(p,jinPath(p,c,w),opacity);};
+ const plank=(x0,y0,z0,x1,y1,z1,mat,k,op=1)=>{const a=at([x0,y0,z0],k),b=at([x1,y1,z1],k);
+ let svg=box(...a,...b,mat,tone,1.65);if(x1-x0>18 && vis([0,0,1])) {
+ for(const v of [.27,.69]){const pts=[.07,.25,.48,.68,.89].map((u,i)=>at([x0+(x1-x0)*u,y0+(y1-y0)*v+(.25*Math.sin(i*1.6)),z1+.04],k));svg+=jinPath(pts,mat.d,.58);}}
+ add([a,b],svg,op);};
+ const tension=jinAmt(st,1), opened=jinAmt(st,2),passed=jinAmt(st,3),woven=jinAmt(st,4);
+ const cycles=st.phase===4?st.t*3:0, fract=cycles%1;
+ const maskOpen=st.phase===4?Math.max(0,Math.sin(fract*Math.PI)):st.done?0:opened;
+ const shed=maskOpen*8, reedX=61+(st.phase===4?(17-8.5*woven)*Math.pow(Math.sin(fract*Math.PI),4):0);
+ const boatY= st.phase===4?32+20*Math.cos(cycles*Math.PI):st.done?12:12+40*passed;
+ const alpha=1-.69*xr;
+ const shadow=castShadow([[8,1,0],[11,63,0],[90,62,0],[110,60,7],[110,4,5],[89,2,0],[27,6,83],[37,59,80]]);
+ // Main timber chassis, short mortised legs and a narrow front seat.
+ for(const y of [4,60]){
+   plank(4,y-2,0,98,y+2,3.9,jinWood,'base',alpha);
+   for(const x of [10,88]){
+     bx([x-2.1,y-2,3.9],[x+2.1,y+2,30.5],jinWood,'base',alpha);
+     bx([x-2.5,y-2.35,27],[x+2.5,y+2.35,29],m,'base',alpha);
+     bx([x-2.1,y-2,30.5],[x+2.1,y+2,45.4],jinWood,'base',alpha);
+   }
+   plank(6,y-2.1,32,93,y+2.1,37.1,lacquer,'base',alpha);
+   rr([10,y,6],[28,y,32],1.45,jinWood,'base',alpha);rr([88,y,6],[72,y,32],1.45,jinWood,'base',alpha);
+   for(const x of [24,44]){bx([x-1.5,y-1.7,36.6],[x+1.5,y+1.7,73],jinHoney,'tower',alpha);bx([x-1.5,y-1.7,73],[x+1.5,y+1.7,87.5],jinHoney,'tower',alpha);}
+   plank(20,y-2.6,85.8,48,y+2.6,89,m,'tower',alpha);
+   rr([25,y,66],[42,y,83.5],1.05,jinWood,'tower',alpha);
+ }
+ for(const x of [12,85])bx([x-1.6,3,9],[x+1.6,61,12],jinWood,'base',alpha);
+ for(const x of [23,44])bx([x-1.9,1.2,84.6],[x+1.9,63,87.8],jinHoney,'tower',alpha);
+ // Draw-person's perch and top lashing rail.
+ for(const x of [22,27,32]) bx([x-2.2,3,72.9],[x+2.2,60.9,75.2],x===27?m:jinWood,'tower',alpha);
+ rr([39,5,83],[39,59,83],1.65,jinWood,'tower',alpha);
+ for(const y of [7,57]){for(const x of [100,110])bx([x-1.2,y-1,0],[x+1.2,y+1,18],jinWood,'base',alpha);}
+ plank(96,3.8,18,113,60.4,20.8,lacquer,'base',alpha);
+ for(const y of [24,40]){
+   rr([28,y,10.2],[76,y,8.5-(maskOpen*(y===24?3.4:0))],1.2,jinWood);
+   bx([64,y-2,6.2-(maskOpen*(y===24?3.4:0))],[76,y+2,9.1-(maskOpen*(y===24?3.4:0))],m);
+   thread([[43,y,10],[45,y,27+maskOpen*2],[45,y,36+maskOpen*2]],'base','#5e5041',1.1);
+ }
+ // Roller ends and bobbins support the continuous warp and woven cloth.
+ for(const [x,k,r] of [[10,'rear',4.2],[88,'roll',4.35]]){
+   rr([x,1.5,43],[x,63,43],1.45,jinWood,k);
+   rr([x,9,43],[x,55,43],r,x===10?matOf('#dac7a5'):jinHoney,k,1,r,1.3);
+   for(const y of [8,54.8])rr([x,y,43],[x,y+1.2,43],r+.7,jinWood,k);
+   for(const y of [13,17,22,28,35,42,48,52])rr([x,y,43],[x,y+.27,43],r+.05,x===10?matOf('#c19b71'):jinHoney,k,1,r+.05,.42);
+ }
+ // Two representative shafts, their leashes and lifting cords.
+ for(let j=0;j<2;j++){
+   const x=41+j*5,lift=(j?-.26:1)*shed;
+   for(const z of [37+lift,55+lift])rr([x,9,z],[x,55,z],.83,j?jinHoney:m,'harness');
+   for(const y of [10,54]){thread([[39,y,83],[x,y,55+lift]],'harness','#80543b',1.28);thread([[x,y,55+lift],[x,y,37+lift]],'harness','#795d4a',1.2);}
+   for(let i=j;i<18;i+=2){const y=12+i*2.35,z=46+lift;
+      thread([[x,y,55+lift],[x,y,z+2],[x,y-.5,z+.2],[x,y,z-1.2],[x,y+.5,z+.2],[x,y,z+2]],'harness','#9a624a',.95);
+      thread([[x,y,z-1.2],[x,y,37+lift]],'harness','#9a624a',.81);}
+ }
+ for(let i=0;i<18;i++){const y=12+i*2.35, z=46+(i%2?-.26:1)*shed;const col=['#c89649','#bf5347','#d4a754','#307975','#a44b50','#dbc691'][i%6];
+  const wp=[[10,y,47],[24,y,44+2*tension],[41+(i%2)*5,y,z],[78-8.5*woven,y,46.9],[87,y,47]];
+  for(let n=0;n<wp.length-1;n++)thread(wp.slice(n,n+2),'warp',col,2.05);
+ }
+ // Suspended swinging reed, with a visible comb between its rails.
+ for(const y of [8.8,55.2]){
+  rr([45,y,79],[reedX,y,49.7],.95,jinWood,'reed',1);bx([reedX-.65,y-.5,41],[reedX+.65,y+.5,52],jinWood,'reed');
+ }
+ for(const z of [41,51.3])bx([reedX-.8,8.4,z],[reedX+.8,55.6,z+1.05],jinHoney,'reed');
+ for(let n=0;n<17;n++){let y=11+n*2.59;thread([[reedX,y,42],[reedX,y,51.3]],'reed','#916f50',.94);}
+ // Prior fabric folds over the breast beam. The new run grows toward the fell.
+ const topStart=78-8.5*woven, webW=41;
+ const clothPt=(u,v)=>at([topStart+u,11.5+v,46.9],'roll'),topLen=88-topStart;
+ let p=[[0,0],[topLen,0],[topLen,webW],[0,webW]].map(([u,v])=>clothPt(u,v));
+ add(p,shape(p,'#ac514d',1.35)+jinPattern(clothPt,topLen,webW,st.done));
+ const apronLen=15+7*woven;
+ const apron=(u,v)=>at([92.15+Math.sin((u/apronLen)*Math.PI)*.9,11.5+v,44.5-u],'roll');
+ p=[[0,0],[apronLen,0],[apronLen,webW],[0,webW]].map(([u,v])=>apron(u,v));
+ const apr=vis([1,0,0])?jinPattern(apron,apronLen,webW,st.done):fill(pd(p),'#ad5d59');
+ add(p,apr+ink(pd(p),1.1));for(let v=.7;v<webW;v+=1.8){const a=apron(apronLen,v);add([a,[a[0]+.25,a[1]+.2,a[2]-1.4]],jinPath([a,[a[0]+.25,a[1]+.2,a[2]-1.4]],'#b08656',1.15));}
+ const curveSections=5;
+ for(let i=0;i<curveSections;i++){const profile=t=>[88+4.15*Math.sin(t*Math.PI/2),44.5+2.4*Math.cos(t*Math.PI/2)];
+ const a=profile(i/curveSections),b=profile((i+1)/curveSections),pts=[[a[0],11.5,a[1]],[a[0],52.5,a[1]],[b[0],52.5,b[1]],[b[0],11.5,b[1]]].map(p=>at(p,'roll'));add(pts,fill(pd(pts),['#ac4944','#bf5c50','#ab4540','#b84942','#973d3c'][i]));}
+ // Boat shuttle: pointed hull, inset spindle and silk visible in its well.
+ const sx=65,sz=46.65,boat=(x,y,z)=>at([sx+x,boatY+y,sz+z],'boat');
+ const outline=[[-.15,-6.3],[1.55,-4.1],[1.75,3.7],[0,6.4],[-1.65,4.05],[-1.85,-3.6]];
+ const a=outline.map(([x,y])=>boat(x*.8,y,-1)),b=outline.map(([x,y])=>boat(x,y,.8));
+ let body=loft(a,b,n=>tone(n,jinHoney))+shape(b,jinHoney.l,.9)+hullInk([...a,...b],1.5);
+ body+=shape([boat(-1,-3.3,1),boat(.95,-3.1,1),boat(.95,3,1),boat(-1,3.2,1)],'#513e34',.62);
+ add([...a,...b],body);rr([sx,boatY-2.75,sz+1.08],[sx,boatY+2.8,sz+1.08],.79,matOf('#b94b40'),'boat');
+ if(passed>0||st.phase===4){const pickX=st.phase===4?Math.max(sx,reedX+.55):sx;thread([[pickX,11,sz],[pickX,boatY,sz],[sx,boatY,sz]],'warp','#b64a40',2.3);}
+ let tips=[{at:at([10,13,46],'rear'),text:'经轴',on:st.phase===1},{at:at([41,12,55+shed],'harness'),text:'提综',on:st.phase===2},{at:boat(0,0,1),text:'梭子',on:st.phase===3},{at:at([reedX,50,51.5],'reed'),text:'筘',on:st.phase===4},{at:apron(apronLen*.45,25),text:'锦面',on:st.done}];
+ return shadow+byDepth(parts)+((ex>.02||xr>.02)?xrCallouts(tips,[1,99,3,60,0,89]):'');
+}
+function jinRun(st,u,n){
+ if(st.busy){u.flash('这一道工序正在进行');return;}if(st.step!==n-1){u.flash(st.step>=n?'此工序已完成':'先完成「'+jinNames[st.step]+'」');return;}
+ st.busy=true;st.phase=n;st.t=0;const e=++st.epoch;
+ u.animate(dt=>{if(e!==st.epoch)return false;st.t=Math.min(1,st.t+dt/[0,1.15,1.2,1.2,2.15][n]);st.progress=(n-1+st.t)/4;
+ if(st.t<1)return true;st.busy=false;st.phase=0;st.step=n;st.done=n===4;if(st.done)u.flash('菱纹蜀锦织成了');return false;});
+}
+function jinReset(st,u){const e=st.epoch+1;Object.assign(st,jinFresh(),{epoch:e});u.flash('织机已复位');}
+const ui=mountFigure({fig:'01',turn:'full',title:'蜀锦织造 · 花楼织机（教学简化模型）',size:[112,64,90],palette:'mustard',
+ state:{...jinFresh(),explode:0,xr:0},scene:jinScene,buttons:[...jinNames.map((label,i)=>({label,onClick:(s,u)=>jinRun(s,u,i+1)})),{label:'重新织造',onClick:jinReset}],
+ stats:s=>[{label:'织造工序',value:s.step+' / 4',small:true}],params(s,q){const n=Math.floor(Math.max(0,Math.min(4,Number(q.get('step'))||0)));s.step=n;s.progress=n/4;s.done=n===4;s.explode=Math.min(1,Math.max(0,Number(q.get('explode'))||0));}});
+window.heritageUI=ui;window.heritageId='jin';xrMount(()=>ui,()=> '');
+</script><script src="../assets/figure-bridge.js"></script></body></html>

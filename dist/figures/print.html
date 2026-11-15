@@ -1,0 +1,145 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>绵竹木版年画 · 锦鸡迎春</title></head><body>
+<script src="../assets/core.js"></script><script>
+/* 绵竹木版年画：刻好的墨线版刷墨、覆纸拓印，揭纸以后由画师一笔笔着色。不是色版套印。
+   来源：中国非遗网项目 13910、项目报道 9741。本图原创，以「锦鸡迎春」为花鸟习作。
+   部件：案板、木背画架及横梃、纸样、案上的反向木线版、凸起版线与其上的墨层、刷墨排刷、
+   揭取用纸、压擦用棕擦、三碟水色及设色笔。纸顺序经过纸摞、木版、案面、晾架。 */
+const prSteps=['木版刷墨','覆纸拓线','手工设色','揭挂晾画'],prClamp=x=>Math.max(0,Math.min(1,x)),prMix=(a,b,t)=>a+(b-a)*t,prMixP=(p,q,t)=>p.map((v,i)=>prMix(v,q[i],t));
+const prInk='#322a24',prPaper='#fff0cc',prBoard={l:'#dfbc93',m:'#be9876',d:'#805c45'},prWal={l:'#ab7755',m:'#916343',d:'#643f30'},prBlock={l:'#cc965c',m:'#a9734a',d:'#744b36'},prBlue=matOf('#46788d'),prBH=3.4;
+const prHU=[.60,-.80,0],prHV=[.114,.0855,-.99],prHN=[.792,.594,.143],prFU=[.337,-.9415,0],prFV=[.9415,.337,0],prFN=[0,0,1],prW=34,prH=44,prOrigin=(mid,U,V,w=prW,h=prH)=>mid.map((v,k)=>v-U[k]*w/2-V[k]*h/2);
+const prFlatMid=[66,30,6.85],prHangMid=[26,49,32],prPaperPile=[27.5,24.5,4.07];
+function prPlane(mid,U,V,N){const origin=prOrigin(mid,U,V);return (u,v,n=0)=>origin.map((a,k)=>a+U[k]*prW*u/100+V[k]*prH*v/124+N[k]*n);}
+const prF=prPlane(prFlatMid,prFU,prFV,prFN),prHk=prPlane(prHangMid,prHU,prHV,prHN);
+function prExt(pts,r=0){return [0,1].map(i=>[0,1,2].map(k=>i?Math.max(...pts.map(p=>p[k]))+r:Math.min(...pts.map(p=>p[k]))-r));}
+function prPut(list,pts,svg,r=0){if(svg)list.push({box:prExt(pts,r),at:avg(pts),svg});}
+function prRod(list,a,b,r,m,r1=r){prPut(list,[a,b],rod(a,b,r,m,toneI,1.08,r1,12),Math.max(r,r1));}
+const prBounds=(mp,x0,y0,x1,y1,h=0)=>[[x0,y0],[x1,y0],[x1,y1],[x0,y1]].map(([x,y])=>mp(x,y,h));
+function prMat(mp){const O=P(...mp(0,0)),u=P(...mp(1,0)),v=P(...mp(0,1));return 'matrix('+[u[0]-O[0],u[1]-O[1],v[0]-O[0],v[1]-O[1],...O].map(x=>x.toFixed(5)).join(' ')+')';}
+function prSlab(mp,uv,low,hi,mat,w=1.4){
+ const A=uv.map(([u,v])=>mp(u,v,low)),B=uv.map(([u,v])=>mp(u,v,hi)),nr=norm(sub(B[0],A[0])),top=vis(nr)?B:A;
+ return {pts:A.concat(B),front:vis(nr),svg:loft(A,B,n=>toneI(n,mat))+shape(top,toneI(vis(nr)?nr:nr.map(v=>-v),mat),w)+hullInk(A.concat(B),w+.4)};}
+function prArt(mp,mode='col',k=1,mirror=false){
+ // In picture space, same authored contours are mirrored on the block, forward on the print.
+ const sw=['#df5943','#f1ae46','#568575','#507c93','#b95f62','#efd799','#3d4440','#f3c8a8'];
+ const base=mode==='wood'?'#c49663':mode==='ink'?'none':prPaper,stroke=mode==='wood'?'#8a5d3b':mode==='ink'?'#302a27':prInk;
+ const pig=(j,threshold)=>mode==='ink'?'none':mode==='wood'?base:mix(prPaper,sw[j],prClamp((k-threshold)*5));
+ const d=(path,j,t=.22,w=1.65)=>'<path d="'+path+'" fill="'+(j===null?'none':pig(j,t))+'" stroke="'+stroke+'" stroke-width="'+w+'" stroke-linecap="round" stroke-linejoin="round"/>';
+ const ln=(path,w=1.03)=>d(path,null,0,w);
+ let a='';
+ a+=d('M5 8 Q5 5 8 5 H92 Q95 5 95 8 V116 Q95 119 92 119 H8 Q5 119 5 116 Z',null,0,1.35);
+ a+=ln('M8 19 V10 H19 M81 10 H92 V19 M8 105 V114 H19 M81 114 H92 V105',1.2);
+ // Long curling tail: separate sickle-shaped plumes with split veins.
+ a+=d('M52 63 C66 56 68 34 83 28 C91 23 94 30 91 39 C90 31 85 31 81 37 C78 44 78 57 66 69 Z',3,.48);
+ a+=d('M55 66 C67 59 77 37 88 43 C98 48 88 62 82 63 C88 55 88 49 84 50 C78 51 75 67 63 72 Z',2,.34);
+ a+=d('M55 69 C64 66 80 53 87 61 C94 70 82 80 75 79 C80 76 86 68 82 67 C77 66 70 77 61 78 Z',0,.02);
+ a+=ln('M62 64 Q74 54 78 39 M66 68 Q76 56 81 52 M67 72 Q76 67 81 66');
+ // Blossom branch and the bird’s feet.
+ a+=d('M11 105 Q29 97 46 96 Q61 95 82 80 L87 81 Q65 101 49 100 Q29 102 13 111 Z',5,.5);
+ a+=ln('M21 103 Q36 99 50 98 M59 95 L66 86 L69 80 M69 91 L77 92 L84 90',1.25);
+ a+=d('M43 78 Q45 85 43 91 L40 95 L33 95 L33 97 L41 96 L45 99 L44 96 L49 95 L47 94 L46 92 L49 80 Z',1,.17,1.2);
+ a+=d('M55 78 Q54 86 56 88 L56 93 L51 96 L53 97 L58 95 L62 97 L61 95 L65 94 L64 93 L59 93 L59 88 L60 79 Z',1,.17,1.2);
+ // Main bird: full breast, scalloped wing, proud neck and folk-art comb.
+ a+=d('M22 43 Q23 37 31 36 Q38 35 40 42 Q41 49 48 52 Q53 55 62 55 L68 53 Q66 60 71 61 Q68 71 62 77 Q59 84 53 84 L52 81 Q48 85 43 85 L42 82 Q36 85 31 79 Q22 75 22 64 Q22 56 25 51 L21 48 Z',0,.01,2);
+ a+=d('M24 44 Q20 49 22 54 Q24 57 27 51 Q29 53 27 57 Q32 56 33 49 L32 43 Z',0,.04);
+ a+=d('M27 40 Q20 36 22 31 Q23 29 27 34 Q26 27 30 24 Q32 24 32 33 Q35 26 38 28 Q40 31 35 36 Q40 34 41 36 Q41 39 34 41 Z',0,.05);
+ a+=d('M28 40 Q33 37 36 41 Q38 45 37 48 Q39 52 43 54 L40 57 L44 60 L39 60 L41 64 L36 62 L35 66 L32 63 L31 68 L28 63 L26 66 Q23 60 25 54 Q27 48 25 46 Z',1,.16);
+ a+=d('M26 42 Q30 39 33 42 Q36 46 31 49 Q27 50 24 47 L20 45 Z',7,.58,1.25);
+ a+=d('M23 43 L15 45 L23 47 L25 46 Z',1,.2,1.3);
+ a+='<circle cx="29.4" cy="44.1" r="1.8" fill="'+stroke+'"/><circle cx="29" cy="43.6" r=".5" fill="'+(mode==='wood'?base:prPaper)+'"/>';
+ a+=d('M37 56 Q45 51 53 56 Q58 60 66 59 Q65 64 61 67 L65 66 Q63 71 58 72 L60 73 Q55 79 49 77 Q42 76 38 71 Q35 66 37 56 Z',2,.36,1.8);
+ a+=d('M39 58 Q43 54 49 57 Q54 59 57 62 Q55 65 53 63 Q52 67 49 64 Q48 68 45 65 Q43 67 41 63 Q39 64 39 58 Z',1,.20,1.2);
+ a+=ln('M40 69 Q46 75 53 74 M44 68 Q50 72 57 69 M49 67 Q56 69 61 64 M27 67 L30 71 L31 68 M31 72 L34 75 L35 72 M29 58 L31 54 M33 57 L35 51 M27 62 L28 59',1.15);
+ // Peony-like plum blossoms with open petals; little sprigs and buds balance the tail.
+ function flower(x,y,r){let g='';for(let i=0;i<5;i++)g+='<path transform="rotate('+i*72+')" d="M0 0 C-4 -1 -4 -5 -2.8 -6 Q-1 -7 0 -5.8 Q1.8 -7.5 3.4 -5.5 Q4.4 -2 0 0Z" fill="'+pig(0,.62)+'" stroke="'+stroke+'" stroke-width="1.05"/>';
+  g+='<circle r="1.65" fill="'+pig(1,.25)+'" stroke="'+stroke+'" stroke-width=".75"/>';return '<g transform="translate('+x+' '+y+') scale('+r+')">'+g+'</g>';}
+ a+=flower(79,84,.85)+flower(66,87,.64)+flower(21,98,.72)+flower(75,22,.60);
+ a+=d('M15 95 Q13 90 17 87 Q21 92 17 96 Z M69 83 Q68 77 74 75 Q75 80 69 83 Z M77 91 Q82 85 88 87 Q85 92 77 91 Z',2,.36,1.1);
+ a+=ln('M69 24 Q75 24 83 17 M79 21 L81 16',.95);
+ // A small cinnabar studio mark in the paper margin.
+ if(mode==='col'&&k>.82)a+='<g fill="#b34b39"><rect x="83" y="102" width="7" height="8" rx=".4"/><path d="M84 104h5m-4 1v3m2-4v5m1-3h1" fill="none" stroke="#fff0cc" stroke-width=".6"/></g>';
+ return '<g transform="'+prMat(mp)+'"><g'+(mirror?' transform="translate(100 0) scale(-1 1)"':'')+'>'+a+'</g></g>';
+}
+function prSheet(mp,col,show=true,back=false){let b=prSlab(mp,[[0,0],[100,0],[100,124],[0,124]],-.15,0,{l:prPaper,m:'#ebdabc',d:'#b4a186'},1.15);if(show&&b.front&&!back)b.svg+=prArt((u,v)=>mp(u,v,.035),'col',col);return b;}
+function prPaintBrush(parts,a,b,col){const p=t=>prMixP(a,b,t);prRod(parts,p(.00),p(.16),.08,matOf('#413729'),.85);prRod(parts,p(.16),p(.28),.85,matOf('#ede1bd'),1.03);prRod(parts,p(.28),p(.37),1.06,col);prRod(parts,p(.37),p(1),.77,prWal,.49);}
+function prScene(st,m){
+ const x=ease(prClamp(st.xr||0)),e=ease(prClamp(st.explode||0)),v=st.step+(st.running?ease(st.motion):0),pp=prClamp(v-1),colour=prClamp(v-2),hang=prClamp(v-3),active=st.running,inkP=prClamp(v),sep=17*e+6*x;
+ const out=[],labels=[],desk=boardTop(0,0,102,80,prBH,4.3);let s=castShadow(desk,0)+board(0,0,102,80,prBH,4.3,prBoard);
+ const paintWood=(d,c,w)=>'<path d="'+pd(d,false)+'" fill="none" stroke="'+c+'" stroke-width="'+w+'" stroke-linecap="round"/>';
+ let gr='';for(let j=0;j<6;j++){const y=7+j*12.8;gr+=paintWood([[3,y,3.41],[19,y+.2,3.41],[35,y-.4,3.41]],'#bf9b76',.53)+paintWood([[78,y-.1,3.41],[89,y+.4,3.41],[98,y,3.41]],'#bf9b76',.53);}
+ s+=clipTo(desk,gr);
+ // The rack stands on two feet and a rear prop. Its colored panel is a real slab with a wood back.
+ const rackUV=[[-6,-5],[106,-5],[106,130],[-6,130]],rack=prSlab(prHk,rackUV,-1.65,-.22,m,1.85),hangFoot=[28,49,4],backFoot=[8.5,35,4.1];
+ s+='<g opacity=".68">'+castShadow(rack.pts.concat([hangFoot,backFoot]),prBH,desk)+'</g>';
+ for(const ux of [4,95]){let top=prHk(ux,18,-1.8),base=prHk(ux,135,-1.4);base[2]=prBH+1;prRod(out,base,top,1.45,prWal);let q=base.map((n,k)=>n+prHN[k]*4);q[2]=prBH+.65;prRod(out,base,q,1.03,prWal);}
+ const hb=prHk(51,24,-2);prRod(out,backFoot,hb,1.5,prWal);prRod(out,backFoot,[26,48,4.2],.83,prWal);
+ let rackSVG=rack.svg;if(!rack.front){const rear=(u,v)=>prHk(u,v,-1.69);for(let t=0;t<3;t++)rackSVG+=line([rear(4,10+t*38),rear(96,10+t*38)],.6);}
+ prPut(out,rack.pts,rackSVG);
+ const railLo=prHk(-8,127,.46),railHi=prHk(108,127,.46);prRod(out,railLo,railHi,1.22,prWal);
+ // A colored exemplar stays in the rack while the working proof lies face-down on the block.
+ if(hang<.99){const sample=prSheet((u,v,n=0)=>prHk(u,v,n+.05),1);prPut(out,sample.pts,sample.svg);}
+ prRod(out,prHk(36,-1,.6),prHk(62,-1,.6),.83,prWal);
+ // Paper stack, a compact untouched supply with visibly separated leaf edges.
+ const stackMP=prPlane(prPaperPile,prFU,prFV,prFN);
+ for(let i=0;i<3;i++){const p=prSlab((u,v,n=0)=>stackMP(u+i*.7,v-i*.5,n+i*.21),[[0,0],[100,0],[100,124],[0,124]],-.13,0,CERAMIC,.68);prPut(out,p.pts,p.svg);}
+ // Sides of the wood block and the raised linework. A separate ink film follows the relief exactly.
+ const buv=[[-4,-4],[104,-4],[104,128],[-4,128]],block=prSlab(prF,buv,-3.4,0,prBlock,1.8);
+ s+='<g opacity=".72">'+castShadow(block.pts,prBH,desk)+'</g>';
+ let blockSVG=block.svg;
+ for(let j=0;j<7;j++){let yy=11+j*16;blockSVG+=paintWood([prF(-1,yy,.005),prF(8,yy+.5,.005),prF(15,yy-.3,.005)],'#a77449',.52);}
+ blockSVG+=prArt((u,v)=>prF(u,v,.06),'wood',1,true);prPut(out,block.pts,blockSVG);
+ const inkHeight=.23+sep*.45;
+ if(inkP>.005||e>.02||x>.02){let inkAlpha=Math.max(inkP,e*.91,x*.78);
+  const filmPts=prBounds(prF,0,0,100,124,inkHeight);prPut(out,filmPts,'<g opacity="'+inkAlpha+'">'+prArt((u,v)=>prF(u,v,inkHeight),'ink',1,true)+'</g>');
+  labels.push({at:prF(58,38,inkHeight),text:'凸线墨层',on:active&&st.step===0});}
+ labels.push({at:prF(12,98,-.6),text:'反向木线版',on:active&&st.step===0});
+ // Paper lands on the inked relief, is rubbed from above, then turned over (one real half turn)
+ // so the printed side faces the colorist. Its return to the rack is a rigid rotation, preserving sheet size.
+ const work=(pp>.001||e>.01||x>.01);
+ const pFace=prClamp((pp-.6)/.4),before=prClamp(pp/.32);
+ const reach=hang,mid0=prMixP([prFlatMid[0],prFlatMid[1],prFlatMid[2]+.48+sep],prHangMid,reach);
+ mid0[2]+=Math.sin(Math.PI*reach)*9;
+ const ux0=[...prFU],vy0=[...prFV],tilt=pFace*Math.PI;
+ let ux=ux0.map((n,i)=>n*Math.cos(tilt)+(i===2?Math.sin(tilt):0)),vy=vy0;
+ // After lifting the face-down page, reverse its u-axis relative to the block.
+ ux=ux.map(n=>-n);let normal=norm(cross(ux,vy));
+ let center=mid0.slice();
+ if(pp<.60&&reach===0){const from=[prPaperPile[0],prPaperPile[1],prPaperPile[2]+1.2];center=prMixP(from,mid0,before);center[2]+=Math.sin(Math.PI*before)*9;}
+ if(pp>=.60&&pp<1)center[2]+=Math.sin(tilt)*(prW*.5+1.2);
+ if(pp===0&&(e>.01||x>.01)){center=mid0.slice();ux=prFU.slice();normal=prFN;}
+ if(reach>0){const theta=Math.atan2(prFU[1],prFU[0])*(1-reach)+Math.atan2(prHU[1],prHU[0])*reach,ang=reach*Math.acos(prHV[0]*.8+prHV[1]*.6);
+   ux=[Math.cos(theta),Math.sin(theta),0];const down=[-ux[1],ux[0],0];vy=[down[0]*Math.cos(ang),down[1]*Math.cos(ang),-Math.sin(ang)];normal=norm(cross(ux,vy));center=center.map((n,i)=>n+prHN[i]*reach*.19);}
+ const pageMP=prPlane(center,ux,vy,normal);
+ if(work){let art=prSheet(pageMP,colour*1.12,pp>.61||reach>0||pp===0,false);let alpha=1-.72*x*(1-reach);
+  prPut(out,art.pts,'<g opacity="'+alpha+'">'+art.svg+'</g>');labels.push({at:pageMP(70,102,.1),text:'印线纸',on:active&&st.step===1});}
+ // Ink pad and short palm brush, both lift together to the platen when charging the wood.
+ const pad=prSlab((u,v,n=0)=>[45+u*.115,59+v*.105,prBH+n],[[0,0],[100,0],[100,77],[0,77]],0,1.3,prWal,1.12);
+ pad.svg+=shape([[45.8,59.8,4.73],[55.7,59.8,4.73],[55.7,66.2,4.73],[45.8,66.2,4.73]],'#393a34',.75);prPut(out,pad.pts,pad.svg);
+ let bpos=[51,63,4.85];if(active&&st.step===0){let tt=st.motion,t=prClamp(tt/.2)*prClamp((1-tt)/.17);bpos=prMixP(bpos,prF(50+31*Math.sin(tt*13),30+52*tt,2),t);bpos[2]+=Math.sin(Math.PI*t)*5;}
+ const bmap=(u,v,n=0)=>[bpos[0]+u*.12,bpos[1]+v*.095,bpos[2]+n];
+ const brushBase=prSlab(bmap,[[-38,-29],[38,-29],[38,29],[-38,29]],0,1.55,matOf('#524b3f'),1.04),brushCap=prSlab(bmap,[[-39,-30],[39,-30],[39,30],[-39,30]],1.5,2.8,prWal,1.1);
+ prPut(out,brushBase.pts,brushBase.svg);prPut(out,brushCap.pts,brushCap.svg);
+ prRod(out,bmap(-20,0,2.8),bmap(-9,0,4.45),.75,prWal);prRod(out,bmap(-9,0,4.45),bmap(16,0,4.45),.74,prWal);prRod(out,bmap(16,0,4.45),bmap(22,0,2.8),.75,prWal);
+ // Palm-fibre rubbing pad on a wooden back. During stage two it sweeps across the back of the paper.
+ let rub=[71,61,prBH];if(active&&st.step===1){const tt=st.motion,t=prClamp((tt-.22)/.12)*prClamp((.72-tt)/.15);rub=prMixP(rub,prF(52+27*Math.sin(tt*22),40+26*tt,.8),t);rub[2]+=Math.sin(t*Math.PI)*3;}
+ const [rx,ry,rz]=rub;prPut(out,[[rx-3.8,ry-3.8,rz],[rx+3.8,ry+3.8,rz+1.6]],cyl(rx,ry,rz,rz+1.6,3.8,matOf('#b99861'),toneI,1.1,16));
+ prPut(out,[[rx-3.85,ry-3.85,rz+1.6],[rx+3.85,ry+3.85,rz+2.55]],cyl(rx,ry,rz+1.6,rz+2.55,3.85,prWal,toneI,1.15,16));
+ prRod(out,[rx-1.4,ry,rz+2.72],[rx+1.5,ry,rz+2.72],.68,prWal);
+ // Three shallow porcelain wells and pigmented water, plus a complete brush between tip and pole.
+ const pans=[[86.5,64,'#da664b'],[92,56,'#efbd55'],[94,45.8,'#5d8e7a']];
+ for(const [cx,cy,color] of pans){let a=on(PZ(prBH+.07),ellUV(cx,cy,2.45,2.45,18)),b=on(PZ(prBH+1.8),ellUV(cx,cy,4,4,18)),c=on(PZ(prBH+1.81),ellUV(cx,cy,3.06,3.06,18));
+  prPut(out,a.concat(b),loft(a,b,n=>toneI(n,CERAMIC))+shape(b,'#f5eee0',1.18)+shape(c,color,.78)+hullInk(a.concat(b),1.45));}
+ let pa=[92,40,4.28],pb=[85,17,4.52];if(active&&st.step===2){const tt=st.motion,g=prClamp(tt/.16)*prClamp((1-tt)/.16),target=pageMP(49+13*Math.sin(tt*19),63+16*Math.cos(tt*13),.10);
+  pa=prMixP([86.5,64,5.1],target,g);pb=prMixP([85,35,5.9],[pa[0]+9,pa[1]-9,pa[2]+18],g);}
+ prPaintBrush(out,pa,pb,prBlue);
+ if(Math.max(e,x)>.35){labels.push({at:[92,56,5.2],text:'水色碟',on:active&&st.step===2});labels.push({at:prHk(75,21,.1),text:'晾画架',on:active&&st.step===3});}
+ return s+byDepth(out)+(Math.max(e,x)>.35?xrCallouts(labels,[20,93,13,72,3,56]):'');
+}
+function prRun(i,st,ui){if(st.running)return ui.flash('这一道正在进行');if(i!==st.step)return ui.flash(i<st.step?'这一道已经完成':'先完成「'+prSteps[st.step]+'」');st.running=true;st.motion=0;const gen=st.generation;
+ ui.animate(dt=>{if(st.generation!==gen)return false;st.motion=Math.min(1,st.motion+dt/[1.35,1.9,1.8,1.35][i]);st.progress=(i+st.motion)/4;if(st.motion<1)return true;st.step=i+1;st.running=false;st.motion=0;st.done=st.step===4;return false;});}
+function prReset(st,ui){st.generation++;Object.assign(st,{step:0,progress:0,done:false,running:false,motion:0});ui.flash('木版已就位，可以重新刷墨');}
+const ui=mountFigure({fig:'03',turn:'full',title:'绵竹木版年画 · 锦鸡迎春',size:[102,80,62],palette:'tomato',state:{progress:0,step:0,done:false,explode:0,motion:0,running:false,generation:0},scene:prScene,
+ stats:st=>[{label:'完成工序',value:st.step+' / 4'}],readout:st=>st.done?'锦鸡迎春 · 成画':prSteps[Math.min(3,st.step)],buttonsLabel:'年画工序',
+ buttons:prSteps.map((label,i)=>({label,onClick:(st,u)=>prRun(i,st,u)})).concat({label:'重新制作',onClick:prReset}),
+ params:(st,q)=>{st.step=Math.max(0,Math.min(4,parseInt(q.get('step'))||0));st.progress=st.step/4;st.done=st.step===4;st.explode=prClamp(+q.get('explode')||0);}});
+window.heritageUI=ui;window.heritageId='print';xrMount(()=>ui,()=> '');
+</script><script src="../assets/figure-bridge.js"></script></body></html>

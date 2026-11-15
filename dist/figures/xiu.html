@@ -1,0 +1,219 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>蜀绣 · 芙蓉绣架</title></head><body>
+<script src="../assets/core.js"></script><script>
+/* A study of two-sided embroidery, not two separate pieces of fabric.
+   Source: https://www.ihchina.cn/project_details/20819
+   Silk ground is laced between the side rails and wrapped round two rollers; tightening
+   the ground removes slack. Silk from the reel passes through the needle's eye. A second
+   hibiscus is shaded by stitches adjoining and overlapping, their direction following
+   each petal. Thread travels through the same cloth to its other face and the end is buried.
+   In exploded view only: stitches spread out from either face so their return path is clear.
+   Parts: scroll feet, support uprights, transverse brace, pivot washers, locking knobs,
+   frame side rails, rollers, journals, laces, ground, front and reverse stitches, needle,
+   eye, working silk, reel pegs, coloured spools, small tray and needle cushion. */
+const xiuNames=['绷紧绣面','引丝穿针','晕色铺针','收针藏线'];
+const xiuNew=()=>({step:0,done:false,progress:0,busy:false,phase:0,t:0,epoch:0});
+const xiuAt=(s,n)=>s.step>=n?1:s.phase===n?s.t:0;
+const xiuLight={l:'#e7ba89',m:'#ba875f',d:'#8c5c46'},xiuWood={l:'#a97c61',m:'#8d604c',d:'#634637'},xiuGold={l:'#e4bc76',m:'#c1965d',d:'#906c4c'};
+const xiuStroke=(p,c,w,ext='')=>'<path d="'+pd(p,false)+'" fill="none" stroke="'+c+'" stroke-width="'+w+'" stroke-linecap="round" stroke-linejoin="round" '+ext+'/>';
+const xiuMinbox=(p,r=0)=>[0,1].map(h=>[0,1,2].map(i=>(h?Math.max:Math.min)(...p.map(q=>q[i]))+(h?r:-r)));
+const xiuSum=(a,b)=>a.map((v,i)=>v+b[i]);
+const xiuInterp=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+const xiuEase=t=>Math.max(0,Math.min(1,t));
+function xiuCurv(a,b,c,d,t){const q=1-t;return a.map((v,i)=>q*q*q*v+3*q*q*t*b[i]+3*q*t*t*c[i]+t*t*t*d[i]);}
+function xiuCurveList(a,b,c,d,n=14){return Array.from({length:n+1},(_,i)=>xiuCurv(a,b,c,d,i/n));}
+const xiuPetPal=[['#c35864','#f69b99','#ffd1b7'],['#bd5061','#e87d83','#f7b8ac'],['#c24a59','#ee8c8d','#ffcec1'],['#ab4657','#df7279','#f6b0a1'],['#ab4352','#e47a7d','#ffc1ac']];
+const xiuLeafPal=['#34665c','#4c8974','#a2b78b'];
+function xiuPetal(cx,cy,angle,r){
+ const rad=angle*Math.PI/180,at=(u,v)=>[cx+r*(u*Math.cos(rad)-v*Math.sin(rad)),cy+r*(u*Math.sin(rad)+v*Math.cos(rad))];
+ const outer=xiuCurveList([.11,-.04],[.22,-.38],[.65,-.71],[.88,-.43],7)
+  .concat(xiuCurveList([.88,-.43],[1.16,-.44],[1.22,-.19],[1.075,-.045],6).slice(1))
+  .concat(xiuCurveList([1.075,-.045],[1.27,.084],[1.11,.34],[.96,.34],6).slice(1))
+  .concat(xiuCurveList([.96,.34],[.76,.57],[.29,.40],[.11,-.04],8).slice(1));
+ const strokes=[];
+ for(let i=0;i<24;i++){
+   const lim=Math.floor((i/23)*(outer.length-3))+1,target=outer[lim],seed=[.14+(.03*Math.sin(i*2)), .035*Math.cos(i)];
+   const p=xiuCurveList(seed,[.38,(target[1]*.05)-.025],[target[0]*.81,target[1]*.67-.038],target,5);
+   strokes.push(p.map(([u,v])=>at(u,v)));
+ }
+ return {poly:outer.map(([u,v])=>at(u,v)),strokes};
+}
+const xiuBloom=(cx,cy,r,rot)=>Array.from({length:5},(_,i)=>xiuPetal(cx,cy,rot+72*i,r*(1+.055*Math.sin(i*4))));
+const xiuA=xiuBloom(39,51,8.5,9), xiuB=xiuBloom(61,66,10,-6);
+function xiuDesign(map,work,tail,reverse=false){
+ let svg='';const outline=(uv,col,w,extra='')=>svg+=xiuStroke(uv.map(([u,v])=>map(u,v)),col,w,extra);
+ const faceuv=(uv,c)=>svg+=fill(pd(uv.map(([u,v])=>map(u,v))),c);
+ const silk=(uv,c,hi,w)=>{outline(uv,c,w);outline(uv.map(([u,v])=>[u+.09,v+.12]),hi,w*.28);};
+ const curve=(a,b,c,d)=>xiuCurveList(a,b,c,d,12);
+ // A branching composition follows the fabric rather than sitting on a separate placard.
+ const branch=curve([75,36],[62,43],[51,56],[38,52]);
+ silk(branch,'#586d50','#acaa77',2.7);
+ silk(curve([62,46],[58,51],[57,59],[61,66]),'#526d54','#a4b483',2.18);
+ silk(curve([53,51],[47,57],[42,63],[33,64]),'#667951','#a0af7d',1.5);
+ silk(curve([63,45],[69,46],[73,48],[75,53]),'#6a7e55','#afb587',1.6);
+ const leaf=(u,v,du,dv,w,fl)=>{
+   const len=Math.hypot(du,dv),per=[-dv/len*w,du/len*w],left=[],right=[];
+   for(let i=0;i<=10;i++){const t=i/10,amp=Math.sin(t*Math.PI)*(1+.13*Math.sin(i*2.8)),c=[u+du*t,v+dv*t];left.push([c[0]+per[0]*amp,c[1]+per[1]*amp]);right.push([c[0]-per[0]*amp*.75,c[1]-per[1]*amp*.75]);}
+   faceuv(left.concat(right.slice().reverse()),fl?'#48786a':'#608d72');
+   faceuv(left.concat([[u+du,v+dv],[u,v]]),fl?'#336557':'#4b7964');
+   outline([[u,v],[u+du*.49+.15,v+dv*.49],[u+du,v+dv]],'#b8bb8d',.97);
+   for(let i=2;i<10;i+=2){const a=[u+du*(i-1.4)/10,v+dv*(i-1.4)/10];outline([left[i],a,right[i]],fl?'#97aa80':'#a3b189',.67);}
+ };
+ leaf(69,40,4,-4.4,1.75,0);leaf(66,43,6.8,-1.1,1.65,1);
+ leaf(62,46,7.5,1.8,2.45,0);leaf(58,49,-1.2,-7.1,2.65,1);
+ leaf(54,51,-4.2,-6.2,2.4,0);leaf(42,54,-6.8,3.4,2.25,1);
+ leaf(43,59,4.3,4.7,1.8,0);leaf(38,63,-5,4,1.8,1);
+ leaf(60,58,5.7,.9,1.75,0);leaf(59,60,-3.5,4.5,1.6,1);
+ leaf(73.8,51.2,2.8,3.2,1.85,1);
+ const bud=xiuPetal(74.5,52.8,53,3.85);faceuv(bud.poly,'#d67679');for(let i=2;i<22;i+=4)outline(bud.strokes[i],'#fab8a5',.77);
+ const flower=(petals,fillAmt,cx,cz,r,core)=>{
+   petals.forEach((p,k)=>{
+     const amt=xiuEase(fillAmt*5-k),colors=xiuPetPal[k];
+     outline(p.poly,'#be968a',.85,'stroke-dasharray="1.2 1.05"');
+     if(amt<=0)return;
+     if(amt>.98){faceuv(p.poly,colors[1]);outline(p.poly,colors[0],.7);}
+     const count=Math.max(1,Math.ceil(p.strokes.length*amt));
+     for(let j=0;j<count;j++){
+       const q=p.strokes[j],base=j%5===0?colors[2]:j%3===0?colors[0]:colors[1];
+       outline(q,base,(amt<.98?3.2:1.3));if(j%2===0){
+        outline(q.slice(0,4),colors[0],1.3);outline(q.slice(3),colors[2],.68);}
+     }
+   });
+   if(core>0){const ey=cz+r*.54,ex=cx-r*.21;
+    const pts=curve([cx,cz],[cx-.6,cz+1],[ex+.3,ey-.65],[ex,ey]);silk(pts,'#9b673b','#f1b45b',1.8);
+    for(let j=0;j<11*core;j++){const a=j*2.399,rr=.52+.75*Math.sqrt(j/11),u=ex+Math.cos(a)*rr,v=ey+Math.sin(a)*rr;
+     faceuv(ellUV(u,v,.45,.46,8),j%3===0?'#aa7445':'#e8b458');}}
+ };
+ flower(xiuA,1,39,51,8.5,1);
+ flower(xiuB,work,61,66,10,tail);
+ return svg;
+}
+function xiuScene(st,m){
+ const ex=ease(st.explode||0),xr=ease(st.xr||0),tight=xiuAt(st,1),loaded=xiuAt(st,2),work=xiuAt(st,3),tail=xiuAt(st,4);
+ const lacquer={l:mix(xiuLight.l,m.l,.68),m:mix(xiuWood.m,m.m,.6),d:mix(xiuWood.d,m.d,.55)};const off={base:[0,0,0],frame:[-3*ex,0,5*ex],silk:[3.5*ex,0,6*ex],front:[10*ex,0,7.3*ex],back:[-5.3*ex,0,4.4*ex],tools:[5*ex,0,0]},parts=[];
+ const shift=(p,k)=>xiuSum(p,off[k||'base']);const stain=1-.59*xr;
+ const put=(p,svg,r=0,op=1)=>{const b=xiuMinbox(p,r);parts.push({at:boxMid(b),box:b,svg:op<1?'<g opacity="'+f(op)+'">'+svg+'</g>':svg});};
+ const rr=(a,b,r,mat,k,w=1.1,r1=r,opacity=1)=>{a=shift(a,k);b=shift(b,k);put([a,b],rod(a,b,r,mat,tone,w,r1,14),Math.max(r,r1)*.75,opacity);};
+ const bb=(a,b,mat,k,w=1.55,op=1)=>{a=shift(a,k);b=shift(b,k);put([a,b],box(...a,...b,mat,tone,w),0,op);};
+ const path=(p,k,c,w,extra='')=>{p=p.map(a=>shift(a,k));put(p,xiuStroke(p,c,w,extra));};
+ const standFoot=(profile,y0,y1,mat,op=1)=>{
+   const a=profile.map(([x,z])=>[x,y0,z]),b=profile.map(([x,z])=>[x,y1,z]),c=vis([0,1,0])?b:a;
+   // foot profiles are convex components; leg and ferrules sort independently.
+   put([...a,...b],loft(a,b,n=>tone(n,mat))+shape(c,tone(vis([0,1,0])?[0,1,0]:[0,-1,0],mat),1.1)+hullInk([...a,...b],1.9),0,op);
+ };
+ const beamAt=z=>41-.41*(z-27);
+ const uv=(y,z,dist=0)=>[beamAt(z)+dist,y,z+.41*dist];
+ const fabric=(y,z,side=0)=>{const slack=(1-tight)*1.3*Math.sin(((y-14)/68)*Math.PI)*Math.sin(((z-30)/50)*Math.PI);return uv(y,z,side-slack);};
+ // Splayed feet, arched shoes and trestle pivots. The shelf is fastened to the low cross brace.
+ for(const y of [5,91]){
+   standFoot([[0,0],[14,0],[21,3.8],[20,5.6],[9,5.8],[1,3.7]],y-2.4,y+2.4,xiuWood,stain);
+   standFoot([[12,2.5],[43,2.5],[48,5.8],[45,7.5],[16,7.4]],y-2.25,y+2.25,lacquer,stain);
+   standFoot([[39,3.1],[46,0],[58,0],[58,3.5],[52.5,5.7],[42,6.2]],y-2.4,y+2.4,xiuWood,stain);
+   standFoot([[18.8,6.4],[30.7,6.4],[29,13.3],[26.8,29],[24.3,29],[22.3,14]],y-1.9,y+1.9,xiuWood,stain);
+   standFoot([[24.3,29],[26.8,29],[31.3,52],[29,57],[25,55],[24.7,47]],y-1.85,y+1.85,lacquer,stain);
+   const center=beamAt(55),sg=y===5?-1:1;
+   rr([center,y-4,55],[center,y+4,55],3.6,xiuWood,'base',1.3,3.6,stain);
+   rr([center,y+sg*3.3,55],[center,y+sg*4.8,55],2.85,xiuGold,'base',1.2);
+   rr([center,y+sg*4.5,55],[center,y+sg*6.3,55],1.75,m,'base');
+   rr([center-2.1,y+sg*6.35,53.9],[center+2.1,y+sg*6.35,56.1],.68,xiuLight,'base');
+ }
+ rr([24.8,4.7,13],[24.8,91.3,13],1.6,xiuWood,'base',1.2,1.6,stain);
+ for(const y of [11,83])rr([25,y,13],[44,y,17],1.05,xiuWood,'base',1.05,1.05,stain);
+ bb([40.5,10,15.8],[52,84,17.5],xiuLight,'base',1.35,stain);
+ // A pencil-width lip stops reels sliding off the tray, with a pin cushion at the working end.
+ for(const x of [40.6,51.2])bb([x,10,17.3],[x+.8,84,18.7],xiuWood,'base',.83,stain);
+ for(const y of [9.8,83.3])bb([40.4,y,17.5],[52.1,y+.8,18.7],xiuWood,'base',.8,stain);
+ for(const [i,v] of [20,27,34,41,48].entries()){
+   const x=46.7,y=v,zz=17.55, silk=['#769287','#568277','#d36c78','#a64f62','#e4b456'][i];
+   rr([x,y,zz],[x,y,zz+5.2],.7,xiuWood,'tools',.65);
+   for(const z of [zz+.3,zz+3.65])rr([x,y,z],[x,y,z+.55],1.95,xiuLight,'tools',.75);
+   rr([x,y,zz+.8],[x,y,zz+3.7],1.57,matOf(silk),'tools',.85);
+   for(let k=0;k<3;k++)rr([x,y,zz+1.05+k*.8],[x,y,zz+1.25+k*.8],1.58,matOf(mix(silk,'#f7ddc0',.22)),'tools',.3);
+ }
+ const pc=[46.5,70.5,17.5];rr(pc,[46.5,70.5,18.5],3.4,xiuGold,'tools',1);
+ rr([46.5,70.5,18.5],[46.5,70.5,20.2],3.3,m,'tools',1,2.8);rr([46.5,70.5,20.2],[46.5,70.5,20.9],2.8,m,'tools',.7,1.65);
+ for(const [dy,dx] of [[-.8,.8],[1.65,-.4]])rr([46.5+dx,70.5+dy,20.2],[47+dx,70.5+dy,22.7],.12,METAL,'tools',.6,.1);
+ // Frame: rollers and journals pass through composite side rails; lacing is independent of the ground.
+ for(const y of [9,87]){
+  rr(uv(y,26),uv(y,82),1.7,lacquer,'frame',1.65,1.7,stain);
+  for(const z of [29,78])rr(uv(y-1.5,z),uv(y+1.5,z),2.25,m,'frame',1.05,2.25,stain);
+  rr(uv(y-2.2,55),uv(y+2.2,55),2.3,xiuGold,'frame',1.05);
+ }
+ for(const z of [27.6,80.7]){
+  rr(uv(6.2,z),uv(89.8,z),1.15,xiuWood,'frame',.95,1.15,stain);
+  rr(uv(11,z),uv(85,z),2.45,xiuLight,'frame',1.55,2.45,stain);
+  rr(uv(15,z),uv(81,z),2.58,matOf('#e1d1ac'),'frame',1.03,2.58,1-.48*xr);
+  for(const y of [14.6,79.9])rr(uv(y,z),uv(y+.6,z),2.65,xiuGold,'frame',.7);
+ }
+ for(const [y,rail] of [[14.8,9],[81.3,87]]){
+  for(let z=32;z<77;z+=4.45){const a=shift(fabric(y,z,.1),'silk'),b=shift(uv(rail,z+1.7,.4),'frame'),c=shift(fabric(y,z+3.9,.1),'silk');put([a,b,c],xiuStroke([a,b,c],'#75694e',1.65)+xiuStroke([a,b,c],'#e5d0a5',.72));}
+ }
+ const frontVis=vis([1,0,.41]),layer=frontVis?1:-1;
+ // One thin ground with two surfaces. Strips shape the loose warp before the frame is tightened.
+ const y0=14.8,y1=81.3,z0=29,z1=79.2;
+ const clothMap=(y,z)=>shift(fabric(y,z,.04),'silk');
+ const corner=[[y0,z0],[y1,z0],[y1,z1],[y0,z1]].map(([y,z])=>clothMap(y,z));
+ let cloth='';
+ for(let i=0;i<8;i++){const ya=y0+i*(y1-y0)/8,yb=y0+(i+1)*(y1-y0)/8, strip=[[ya,z0],[yb,z0],[yb,z1],[ya,z1]].map(([y,z])=>clothMap(y,z));
+ cloth+=fill(pd(strip),mix('#f5e6cd','#e4cfa9',(1-tight)*.17*(1+Math.sin(i*.85))));}
+ cloth+=ink(pd(corner),1.25);
+ for(const y of [15.5,16.1,79.9,80.5])cloth+=xiuStroke([clothMap(y,z0+.5),clothMap(y,z1-.5)],'#bda887',.83,'stroke-dasharray="1 .85"');
+ for(let z=31;z<79;z+=3.8)cloth+=xiuStroke([clothMap(16.5,z),clothMap(79.6,z+.18)],'#d6bf9e',.6,'opacity=".46"');
+ for(let y=18;y<80;y+=4.25)cloth+=xiuStroke([clothMap(y,z0+.6),clothMap(y,z1-.65)],'#d9c9ac',.55,'opacity=".42"');
+ const surface=(sign,which)=> (y,z)=>shift(fabric(y,z,sign*.26),which);
+ const revealLayers=ex>.02||xr>.02;
+ const clothBounds=corner.slice();
+ function stitches(sign){
+   const which=sign===1?'front':'back',map=surface(sign,which);
+   clothBounds.push(...[[y0,z0],[y1,z0],[y1,z1],[y0,z1]].map(([y,z])=>map(y,z)));
+   const opacity=sign===layer?1:.33+.32*ex;
+   return '<g data-stitches="'+which+'" opacity="'+opacity+'">'+xiuDesign(map,work,tail,sign<0)+'</g>';
+ }
+ // The two stitched faces are parallel to the ground. Their bounding boxes overlap,
+ // so the stand's general depth sort cannot establish their order. Paint this textile
+ // as one assembly, from its far side through the ground to the side facing the viewer.
+ let farThread='',nearThread='';
+ if(revealLayers){
+   const front=surface(1,'front'),back=surface(-1,'back');
+   for(let i=0;i<9;i++){
+     const y=34+i*1.28,z=51.5+1.6*Math.sin(i*.73);
+     const a=front(y,z),b=back(y+.5,z+.35),through=clothMap(y+.25,z+.175);
+     const colour=i%3?'#ac6070':'#db9294';
+     farThread+=xiuStroke([layer===1?b:a,through],colour,1.32);
+     nearThread+=xiuStroke([through,layer===1?a:b],colour,1.32);
+   }
+ }
+ const farStitches=revealLayers?stitches(-layer):'';
+ const ground='<g data-textile-ground="" opacity="'+(1-.81*xr)+'">'+cloth+'</g>';
+ const nearStitches=stitches(layer);
+ put(clothBounds,farStitches+farThread+ground+nearThread+nearStitches);
+ // Working needle: front-to-back passes follow the direction of the corresponding flower's silk.
+ const k=Math.min(119,Math.floor(work*120)),frac=work*120-k,ps=xiuB[Math.floor(k/24)].strokes[k%24];
+ let uvN=ps[Math.min(5,Math.floor(frac*6))];if(st.step>=3||st.phase===4)uvN=[61,66+tail*4.8];
+ const sew=st.phase===3?Math.sin((st.t*22)*Math.PI*2):st.phase===4?Math.cos(st.t*6*Math.PI):0;
+ let needleDist=3.5+sew*5.3;
+ const needleTarget=shift(fabric(...uvN,needleDist),'front'),home=shift([46,69.8,21],'tools');
+ let tip=xiuInterp(home,needleTarget,ease(loaded)),eye=xiuSum(tip,[4.3,3.1,4.15]);
+ if(st.done){tip=home;eye=xiuSum(tip,[1.55,-1.45,5]);}
+ rr(tip,eye,.12,METAL,'base',1.15,.36);const hole=xiuSum(eye,[-.45,-.32,-.48]);
+ if(st.phase===2 ||st.step>=2&&!st.done){
+   const touch=shift(fabric(...uvN,.4),'front');
+   const start=st.phase===2?shift([47,34,21],'tools'):touch;
+   const thread=xiuCurveList(start,xiuSum(start,[6.5,-.75,-2.4]),xiuSum(hole,[2.5,-4.75,-3.2]),hole,14);
+   put(thread,xiuStroke(thread,'#994756',2.05)+xiuStroke(thread,'#ec9297',.65));
+ }
+ const shade=castShadow([[0,3,0],[56,3,0],[56,92,0],[0,92,0],[17,81,78],[17,14,78]]);
+ let cues=[{at:shift(uv(31,80.7),'frame'),text:'卷绷杆',on:st.phase===1},{at:clothMap(23,58),text:'软缎',on:st.phase===1},{at:eye,text:'绣针',on:st.phase===2||st.phase===3},{at:surface(layer,layer===1?'front':'back')(61,66),text:layer===1?'正面针迹':'背面针迹',on:st.phase===3||st.done},{at:shift([46.7,34,20.3],'tools'),text:'丝线',on:st.phase===2}];
+ return shade+byDepth(parts)+((ex>.02||xr>.02)?xrCallouts(cues,[2,56,8,85,4,82]):'');
+}
+function xiuRun(st,u,n){
+ if(st.busy){u.flash('针线正在移动，请稍候');return;}if(st.step!==n-1){u.flash(st.step>=n?'此工序已完成':'先完成「'+xiuNames[st.step]+'」');return;}
+ st.busy=true;st.phase=n;st.t=0;const e=++st.epoch;
+ u.animate(dt=>{if(e!==st.epoch)return false;st.t=Math.min(1,st.t+dt/[0,1.05,1.3,2.15,1.2][n]);st.progress=(n-1+st.t)/4;
+ if(st.t<1)return true;st.busy=false;st.phase=0;st.step=n;st.done=n===4;if(st.done)u.flash('芙蓉绣成，转到背面看看');return false;});
+}
+function xiuReset(st,u){const e=st.epoch+1;Object.assign(st,xiuNew(),{epoch:e});u.flash('绣架已复位');}
+const ui=mountFigure({fig:'02',turn:'full',title:'蜀绣 · 双面芙蓉绣架',size:[59,97,82],palette:'blush',state:{...xiuNew(),xr:0,explode:0},scene:xiuScene,
+ buttons:[...xiuNames.map((label,i)=>({label,onClick:(s,u)=>xiuRun(s,u,i+1)})),{label:'重新刺绣',onClick:xiuReset}],
+ stats:s=>[{label:'刺绣工序',value:s.step+' / 4',small:true}],params(s,q){const n=Math.floor(Math.max(0,Math.min(4,Number(q.get('step'))||0)));s.step=n;s.progress=n/4;s.done=n===4;s.explode=Math.min(1,Math.max(0,Number(q.get('explode'))||0));}});
+window.heritageUI=ui;window.heritageId='xiu';xrMount(()=>ui,()=> '');
+</script><script src="../assets/figure-bridge.js"></script></body></html>
