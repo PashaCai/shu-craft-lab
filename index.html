@@ -1,58 +1,99 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="转一转，拆开看，亲手做。五座可操作的四川非遗微型工坊，让传统手艺在指尖发生。">
-  <meta name="theme-color" content="#f2efe7">
-  <title>蜀作 · 把非遗，放在手心</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="在六间四川非遗工坊里旋转模型、观察结构、亲手制作，把自己的作品放进数字展柜。">
+  <meta name="theme-color" content="#f7f8fa">
+  <title>蜀作 · 四川非遗互动工坊</title>
   <link rel="icon" type="image/svg+xml" href="assets/mark.svg">
   <link rel="stylesheet" href="assets/site.css">
-  <script defer src="assets/content.js"></script><script defer src="assets/app.js"></script>
+  <link rel="stylesheet" href="assets/cabinet.css">
+  <script defer src="assets/content.js"></script>
+  <script defer src="assets/cabinet-vision.js"></script>
+  <script defer src="assets/cabinet.js"></script>
+  <script defer src="assets/app.js"></script>
 </head>
 <body>
+  <a class="skip-link" href="#main">跳到当前工坊</a>
   <header class="masthead">
-    <a class="brand" href="#jin" aria-label="蜀作首页"><span class="brand-seal" aria-hidden="true"><span>蜀</span><span>作</span></span><span class="brand-name">蜀作<span>SHU CRAFT LAB</span></span></a>
-    <div class="masthead-note"><span class="tiny-star">✳</span> 把非遗，放在手心。</div>
-    <nav class="top-nav" aria-label="主导航"><button class="nav-link active" data-open="workshop">工坊漫游</button><button class="nav-link" data-open="notebook">学习手记<span id="notebook-count">0</span></button><button class="nav-link" data-open="about">关于工坊</button></nav>
-    <button class="classroom-button" id="classroom" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7V3h4M13 3h4v4M17 13v4h-4M7 17H3v-4"/></svg><span>课堂演示</span></button>
+    <div class="header-inner">
+      <a class="brand" href="#jin" aria-label="蜀作首页"><img src="assets/mark.svg" alt="" width="34" height="34"><span>蜀作</span></a>
+      <span class="brand-detail">四川非遗互动工坊</span>
+      <nav class="top-nav" aria-label="主导航">
+        <button class="nav-link active" data-open="workshop">工坊漫游</button>
+        <button class="nav-link" data-open="notebook">学习手记<span id="notebook-count">0</span></button>
+        <button class="nav-link" data-open="about">关于工坊</button>
+      </nav>
+      <button class="classroom-button" id="classroom" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 17v3m-4 0h8"/></svg><span>课堂演示</span></button>
+    </div>
   </header>
   <div class="workspace">
-    <aside class="sidebar">
-      <div class="catalog-heading"><span>四川 · 手艺漫游</span><span class="catalog-total">01 — 05</span></div>
-      <p class="catalog-intro">五门手艺，<br>五种看世界的方式。</p>
+    <aside class="catalog" aria-label="选择工坊">
+      <div class="catalog-heading"><h2>探索工坊</h2><button class="help-button" data-open="help"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 .2c0 1.9-2.5 2.1-2.5 4.1m0 2.8h.01"/></svg>操作指南</button></div>
       <nav id="craft-nav" aria-label="非遗工坊"></nav>
-      <div class="travel-progress"><div><span>我的手艺足迹</span><strong id="visited-count">0 / 5</strong></div><div class="progress-track"><i id="visited-fill"></i></div><p>每完成一件作品，留下一枚印记。</p></div>
-      <button class="sidebar-help" data-open="help"><span>?</span> 第一次来？这样玩 <span class="arrow">↗</span></button>
-      <div class="sidebar-bottom"><span class="map-mark" aria-hidden="true">川</span><span>从四川出发<br><small>让手艺被看见，也被理解。</small></span></div>
     </aside>
-    <main id="main">
+    <main id="main" tabindex="-1">
       <section class="workshop-heading" aria-labelledby="craft-title">
-        <div class="workshop-kicker"><span id="fig-number">工坊 01</span><span class="small-rule"></span><span id="craft-category">传统技艺</span><span id="craft-location" class="location">四川 · 成都</span></div>
-        <div class="workshop-title-row"><h1 id="craft-title">一经一纬，织出锦城。</h1><button id="craft-about" class="text-button">认识这门手艺 <span>↗</span></button></div>
-        <p id="craft-subtitle">把丝线交给织机，让花纹从经纬之间慢慢长出来。</p>
+        <div class="heading-copy">
+          <div class="workshop-kicker"><span id="fig-number">工坊 01</span><span aria-hidden="true">/</span><span id="craft-category">传统技艺 · 丝织</span><span aria-hidden="true">/</span><span id="craft-location">四川 · 成都</span></div>
+          <h1 id="craft-title">一经一纬，织出锦城。</h1>
+          <p id="craft-subtitle">把丝线交给织机，让花纹从经纬之间慢慢长出来。</p>
+        </div>
+        <div class="exhibit-actions" role="group" aria-label="展柜与实物采集">
+          <button id="open-cabinet" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="16" rx="2"/><path d="M3 12h18M7 19v2m10-2v2m-9-9V8l2-2 2 2v4m4 0V7"/></svg>作品展柜</button>
+          <button id="open-camera" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8a2 2 0 0 1 2-2h3l1.5-2h5L16 6h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg>拍照采集</button>
+        </div>
       </section>
       <div class="workbench">
         <section class="figure-panel" aria-label="可旋转的非遗体验场景">
-          <div class="figure-toolbar"><span class="live-indicator"><i></i> 可以动手的非遗</span><div class="view-modes" role="group" aria-label="结构观察"><button id="xray-toggle" aria-pressed="false">透视内部</button><button id="labels-toggle" aria-pressed="false">部件标注</button><button id="explode-toggle" aria-pressed="false"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="m9 2 7 4-7 4-7-4 7-4Zm-7 8 7 4 7-4M2 14l7 4 7-4"/></svg>拆开看看</button></div></div>
-          <div class="figure-stage" id="figure-stage"><div id="loading" role="status"><span class="loading-wheel"></span><span>正在摆好手艺人的工作台…</span></div><iframe id="craft-frame" title="蜀锦互动织机" allow="fullscreen"></iframe><div class="stage-corner">拖动旋转 · 滚轮缩放</div><div class="zoom-tools" aria-label="缩放"><button id="zoom-out" aria-label="缩小">−</button><button id="zoom-reset" aria-label="重置缩放">100%</button><button id="zoom-in" aria-label="放大">+</button></div></div>
+          <div class="studio">
+            <div class="figure-toolbar">
+              <h2 class="studio-heading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Zm0 10v10M3 7l9 5 9-5"/></svg>立体工作台</h2>
+              <div class="view-modes" role="group" aria-label="结构观察"><button id="xray-toggle" aria-pressed="false">透视内部</button><button id="labels-toggle" aria-pressed="false">部件标注</button><button id="explode-toggle" aria-pressed="false">拆开看看</button></div>
+            </div>
+            <div class="figure-stage" id="figure-stage">
+              <div id="loading" role="status"><span class="loading-wheel"></span><span>正在摆好手艺人的工作台…</span></div>
+              <iframe id="craft-frame" title="蜀锦互动织机" allow="fullscreen"></iframe>
+            </div>
+            <div class="stage-dock"><span class="stage-corner"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 10a9 9 0 0 1 15-3m0-4v4h-4M19 14a9 9 0 0 1-15 3m0 4v-4h4"/></svg>拖动旋转<span> · 滚轮缩放</span></span><div class="zoom-tools" role="group" aria-label="缩放"><button id="zoom-out" aria-label="缩小">−</button><button id="zoom-reset" aria-label="重置缩放">100%</button><button id="zoom-in" aria-label="放大">+</button></div></div>
+          </div>
           <div id="part-legend" class="part-legend" aria-label="部件名称"></div>
           <div class="bench-controls">
-            <div class="bench-control wobble-control"><label for="wobble">手绘的温度 <span id="wobble-value">2.4</span></label><input type="range" id="wobble" min="0" max="7" step="0.1" value="2.4" aria-label="手绘线条抖动程度"></div>
-            <div class="bench-control"><span class="control-label">给作品换个颜色</span><div class="swatches" id="palette-controls" role="group" aria-label="作品配色"><button data-palette="mustard" style="--swatch:#f4b829" aria-label="姜黄" aria-pressed="true"></button><button data-palette="tomato" style="--swatch:#ed644d" aria-label="朱红" aria-pressed="false"></button><button data-palette="mint" style="--swatch:#a8d9bc" aria-label="竹青" aria-pressed="false"></button><button data-palette="cobalt" style="--swatch:#7194df" aria-label="靛蓝" aria-pressed="false"></button><button data-palette="blush" style="--swatch:#eaa6bb" aria-label="藕粉" aria-pressed="false"></button></div></div>
-            <div class="bench-control"><span class="control-label">换个角度，发现更多</span><div class="camera-controls"><button id="front-view">回到正面</button><button id="spin-toggle" aria-pressed="false"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M15 5v4h-4M14.5 8a5.5 5.5 0 1 0-.5 5"/></svg>自动旋转</button></div></div>
+            <div class="bench-control wobble-control"><label for="wobble">手绘线条 <span id="wobble-value">2.4</span></label><input type="range" id="wobble" min="0" max="7" step="0.1" value="2.4" aria-label="手绘线条抖动程度"></div>
+            <div class="bench-control"><span class="control-label">工坊配色</span><div class="swatches" id="palette-controls" role="group" aria-label="工坊配色"><button data-palette="mustard" style="--swatch:#f4b829" aria-label="姜黄" aria-pressed="true"></button><button data-palette="tomato" style="--swatch:#ed644d" aria-label="朱红" aria-pressed="false"></button><button data-palette="mint" style="--swatch:#a8d9bc" aria-label="竹青" aria-pressed="false"></button><button data-palette="cobalt" style="--swatch:#7194df" aria-label="靛蓝" aria-pressed="false"></button><button data-palette="blush" style="--swatch:#eaa6bb" aria-label="藕粉" aria-pressed="false"></button></div></div>
+            <div class="bench-control"><span class="control-label">观察视角</span><div class="camera-controls"><button id="front-view">回到正面</button><button id="spin-toggle" aria-pressed="false">自动旋转</button></div></div>
           </div>
+          <section id="lacquer-options" class="lacquer-options" aria-labelledby="lacquer-heading" hidden>
+            <h2 id="lacquer-heading">设计你的漆器</h2>
+            <div class="lacquer-fields">
+              <label for="lacquer-shape">器形<select id="lacquer-shape"><option value="bowl">漆碗</option><option value="vase">花瓶</option><option value="box">圆盒</option><option value="plate">漆盘</option></select></label>
+              <label for="lacquer-color">漆色<select id="lacquer-color"><option value="#A53A32">朱砂</option><option value="#242327">墨黑</option><option value="#38796C">松绿</option><option value="#AA782F">金褐</option><option value="#345674">黛蓝</option><option value="#9B5676">紫绛</option></select></label>
+              <label for="lacquer-pattern">纹样<select id="lacquer-pattern"><option value="cloud">云纹</option><option value="rings">弦纹</option><option value="petals">花瓣纹</option></select></label>
+            </div>
+            <button id="lacquer-save" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V7h4l2-3h4l2 3h4v12Z"/><path d="M12 9v7m-3-3 3 3 3-3"/></svg>存入作品展柜</button>
+          </section>
         </section>
         <aside class="learning-panel" aria-label="学习与制作引导">
-          <div class="note-kicker">手艺人的小课堂 <span>FIELD NOTES</span></div>
+          <div class="learning-heading"><h2>工艺课堂</h2><button id="craft-about" class="text-button">认识手艺 <span aria-hidden="true">↗</span></button></div>
           <div class="learning-tabs" role="tablist" aria-label="学习内容"><button role="tab" aria-selected="true" id="tab-make" aria-controls="make-panel">动手做</button><button role="tab" aria-selected="false" id="tab-learn" aria-controls="learn-panel">读懂它</button></div>
-          <div id="make-panel" role="tabpanel" aria-labelledby="tab-make"><div class="process-heading"><h2>今天，做一件<span id="product-name">蜀锦小样</span></h2><p>从工作台左侧的第一步开始。</p></div><ol id="process-list" class="process-list"></ol><div class="making-progress"><div><span id="progress-label">还未动手</span><strong id="progress-number">0%</strong></div><div class="progress-track"><i id="making-fill"></i></div></div><button class="collect-button" id="collect-work"><span>收进我的手记</span><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M4 2h10v14l-5-3-5 3V2Z"/></svg></button><p id="collect-hint" class="fine-print">完成制作，收藏你的第一件非遗作品。</p></div>
-          <div id="learn-panel" role="tabpanel" aria-labelledby="tab-learn" hidden><p id="craft-description" class="craft-description"></p><div class="look-closer"><span>拆开之后，看这里</span><p id="look-note"></p></div><div class="question-block"><span class="question-label">想一想 · 试一试</span><h3 id="quiz-question"></h3><div id="quiz-options"></div><p id="quiz-feedback" role="status"></p></div><a id="source-link" class="source-link" target="_blank" rel="noopener">去中国非遗网继续探索 ↗</a></div>
-          <div class="workshop-stamp" aria-hidden="true"><span>手有温度</span><span>艺有来处</span></div>
+          <div id="make-panel" role="tabpanel" aria-labelledby="tab-make">
+            <div class="process-heading"><h3>制作<span id="product-name">蜀锦小样</span></h3><p>依次点击模型旁的工序按钮。</p></div>
+            <ol id="process-list" class="process-list"></ol>
+            <div class="making-progress"><div><span id="progress-label">还未动手</span><strong id="progress-number">0%</strong></div><div class="progress-track"><i id="making-fill"></i></div></div>
+            <button class="collect-button" id="collect-work"><span>收进我的手记</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4Z"/></svg></button>
+            <p id="collect-hint" class="fine-print">完成制作，收藏你的第一件非遗作品。</p>
+          </div>
+          <div id="learn-panel" role="tabpanel" aria-labelledby="tab-learn" hidden><p id="craft-description" class="craft-description"></p><div class="look-closer"><h3>拆开之后，看这里</h3><p id="look-note"></p></div><div class="question-block"><span class="question-label">想一想</span><h3 id="quiz-question"></h3><div id="quiz-options"></div><p id="quiz-feedback" role="status"></p></div><a id="source-link" class="source-link" target="_blank" rel="noopener">去中国非遗网继续探索 ↗</a></div>
         </aside>
       </div>
-      <footer class="page-footer"><span>一个物件，一方水土，一代代人的智慧。</span><span>手艺模型为课堂简化示意 <i>·</i> <a href="https://april-zhu.com/colorfigures" target="_blank" rel="noopener">Built with Colorfigures ↗</a></span></footer>
     </main>
+    <footer class="page-footer">
+      <div class="travel-progress"><div><span>我的手艺足迹</span><strong id="visited-count">0 / 6</strong></div><div class="progress-track"><i id="visited-fill"></i></div></div>
+      <div>手艺模型为课堂简化示意 <span aria-hidden="true">·</span> <a href="https://april-zhu.com/colorfigures" target="_blank" rel="noopener">Built with Colorfigures ↗</a></div>
+    </footer>
   </div>
-  <dialog id="info-dialog"><div class="dialog-top"><span id="dialog-kicker">蜀作 · 非遗互动工坊</span><button id="close-dialog" aria-label="关闭弹窗">×</button></div><div id="dialog-content"></div></dialog>
+  <dialog id="info-dialog" aria-labelledby="dialog-kicker"><div class="dialog-top"><span id="dialog-kicker">蜀作 · 非遗互动工坊</span><button id="close-dialog" aria-label="关闭弹窗">×</button></div><div id="dialog-content"></div></dialog>
   <div class="app-toast" id="app-toast" role="status" aria-live="polite"></div>
-</body></html>
+</body>
+</html>

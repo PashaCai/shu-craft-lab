@@ -41,4 +41,14 @@ window.CRAFTS = [
     source:'https://www.ihchina.cn/Article/Index/detail?id=15112',sourceTitle:'中国非遗网 · 灯会（自贡灯会）',
     icon:'<path d="M12 34c-2-12 1-20 9-25 4 9 6 18 7 26 1-12 5-21 11-26 8 9 9 18 4 29Z" fill="#df8d90"/><path d="M9 28c8 0 14 4 19 11C33 31 41 28 49 29c-1 15-9 19-21 17C17 48 9 40 9 28Z" fill="#e8ad60"/><path d="M17 36c4 1 9 4 11 8m13-9c-5 2-9 4-13 9M20 13l7 24m12-25L29 38"/><path d="M21 45h15v7H21Z" fill="#a4b88b"/><path d="M17 53h23" stroke-width="3"/><circle cx="28" cy="30" r="4" fill="#f9d978"/>'}
 ];
+window.CRAFTS.push({
+  id:'lacquer',name:'成都漆艺',place:'成都',category:'传统技艺 · 漆器髹饰',title:'层层髹漆，磨出一线光。',subtitle:'选一件器形，从木胎做到漆面，再为它在展柜里留一个位置。',product:'成都漆器习作',palette:'tomato',
+  description:'成都漆艺是四川成都的国家级非遗代表性项目，以雕嵌填彩、雕填影花等装饰技艺闻名。本工坊以木胎为例：器胎决定形状，底灰找平表面，漆层在适宜的温湿度下逐层阴干。最后装饰、研磨、推光，器物才有了看得见的光泽。',
+  look:'拆开成品，按从里到外的顺序找到木胎、底灰和漆层。改变器形，观察碗口、盘沿、盒盖和瓶颈的区别；旋转成品时，哪些纹饰会从视线中消失？',
+  note:'课堂常说的“烧漆器”容易与烧陶混淆：这里展示的是成都木胎漆器的髹饰，不需要把木胎送进窑里烧。模型放大了漆层厚度，把多次髹涂、阴干和打磨浓缩为四步；纹饰为教学设计。',
+  steps:[['制胎','选择器形，做好承托漆面的木胎。'],['做底灰','用底灰找平胎面，再打磨平整。'],['髹漆阴干','薄髹漆料，逐层阴干。'],['装饰推光','施加纹饰，研磨推光，显出漆面光泽。']],
+  quiz:{q:'这件木胎漆器的漆层怎样成形？',options:['像陶器一样入窑烧成','反复薄髹、逐层阴干，再经研磨推光','只给木胎刷上一次金色颜料'],answer:1,explain:'木胎决定器形，髹漆和阴干使漆层逐步形成，研磨推光显出光泽。'},
+  source:'https://www.ihchina.cn/project_details/14364/',sourceTitle:'中国非遗网 · 成都漆艺（国家级项目 Ⅷ-56）',
+  icon:'<ellipse cx="30" cy="48" rx="17" ry="4" fill="#c6ccdd" stroke="none"/><path d="M7 23q3 17 19 20v4q4 2 9-1v-4q14-5 17-19Z" fill="#ae433b"/><ellipse cx="29.5" cy="23" rx="22.5" ry="8" fill="#552e30"/><ellipse cx="29.5" cy="22" rx="19" ry="5.3" fill="#d56c52"/><path d="M12 29q16 10 35 0m-32 6q15 9 28 0" fill="none" stroke="#e7bb6d"/><path d="M16 31q3-3 6 2t7 1" fill="none" stroke="#efca87"/>'
+});
 window.craftIcon = craft => `<svg viewBox="0 0 60 60" aria-hidden="true">${craft.icon}</svg>`;

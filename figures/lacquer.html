@@ -1,0 +1,238 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>成都漆艺 · 髹饰器物</title></head><body>
+<script src="../assets/core.js"></script>
+<script>
+/*
+ 成都漆艺（国家非遗名录 Ⅷ-56）：https://www.ihchina.cn/project_details/14364.html
+ 木胎示范的四幕：修整木胎 → 刮底灰、磨平 → 逐遍髹漆阴干 → 饰纹、推光。
+ 这是概括工序的教学示意；剖视与分解为辨认材料而夸大各道涂层的厚度。
+ 场景部件：器足、实木胎壁与内底、底灰、内外漆面、口沿、饰纹、盒盖和钮；
+ 工作案、三层转盘、灰料盘、漆盏、竹胎漆刷与毛束、刮灰片、磨石、棉布。
+*/
+const laShapes={
+ bowl:{r:30,h:25,p:[.40,.42,.49,.57,.65,.72,.79,.85,.90,.95,.98,1]},
+ vase:{r:22,h:52,p:[.43,.53,.75,.93,1,.96,.82,.62,.40,.32,.32,.42]},
+ box:{r:26,h:19,p:[.82,.88,.94,.98,1,1,1,.99,.98,.97,.97,.98]},
+ plate:{r:32,h:10,p:[.35,.40,.49,.60,.68,.76,.84,.91,.97,1,1,.99]}
+},laPals={tomato:'#A53A32',mustard:'#AA782F',mint:'#38796C',cobalt:'#345674',blush:'#9B5676'},laSteps=['制胎','底灰','髹漆阴干','装饰推光'];
+const laTau=2*Math.PI,laN=40,laW=laTau/laN,laClamp=n=>Math.max(0,Math.min(1,n)),laLerp=(a,b,t)=>a+(b-a)*t;
+const laHex=s=>typeof s==='string'&&/^#[0-9a-f]{6}$/i.test(s);
+const laMat=(hex,hl=.18)=>({l:mix(hex,'#fff2d4',hl),m:hex,d:mix(hex,'#180e20',.47)});
+const laWood={l:'#e1b071',m:'#ba8654',d:'#865c42'},laGrey={l:'#bbb09e',m:'#978b7d',d:'#71685e'};
+function laSet(st,values){
+ if(Object.hasOwn(laShapes,values.shape)&&st.shape!==values.shape){st.shape=values.shape;st.profile=null;}
+ if(laHex(values.color))st.color=values.color.toUpperCase();
+ if(laHex(values.accent))st.accent=values.accent.toUpperCase();
+ if(['cloud','rings','petals'].includes(values.pattern))st.pattern=values.pattern;
+ if(Object.hasOwn(values,'profile')){
+  const a=Array.isArray(values.profile)?values.profile:typeof values.profile==='string'?values.profile.split(','):[];
+  if(a.length===12&&a.every(v=>(typeof v==='number'||typeof v==='string'&&v.trim()!=='')&&Number.isFinite(+v)&&+v>=0&&+v<=1))st.profile=a.map(Number);
+  else if(values.profile===null||values.profile==='')st.profile=null;
+ }
+}
+function laParams(st,q){laSet(st,Object.fromEntries(q));st.exhibit=q.get('exhibit')==='1';st.explode=laClamp(+q.get('explode')||0);
+ if(q.has('step')||st.exhibit){st.step=st.exhibit?4:Math.max(0,Math.min(4,parseInt(q.get('step'))||0));st.done=st.step===4;st.progress=st.step/4;st.demo=false;}}
+const laPath=(pts,col,w,extra='')=>'<path d="'+pd(pts,false)+'" fill="none" stroke="'+col+'" stroke-width="'+w+'" stroke-linecap="round" stroke-linejoin="round" '+extra+'/>';
+const laDisc=(x,y,z,r,n=40)=>on(PZ(z),ellUV(x,y,r,r,n));
+function laPart(items,lo,hi,svg){items.push({box:[lo,hi],at:avg([lo,hi]),svg});}
+function laPigment(x,y,mat,pigment){
+ const a=laDisc(x,y,3.05,3.1),b=laDisc(x,y,5.6,4.1),c=laDisc(x,y,5.48,3.38);
+ return loft(a,b,n=>toneI(n,mat))+hullInk(a.concat(b),1.8)+shape(b,mat.l,.9)+shape(c,pigment,.8)+laPath(laDisc(x,y,5.49,2.45).slice(1,9),'#dfbc95',.65);
+}
+function laTools(st,stage,x,y){
+ const items=[],top=boardTop(0,0,100,80,3,5);
+ let paper=castShadow(top)+board(0,0,100,80,3,5,{l:'#dfc397',m:'#b68b61',d:'#886749'});
+ for(let j=0;j<8;j++){const yy=6+j*9.7;paper+=laPath([[6,yy,3.03],[12,yy-.3,3.03],[20,yy+.2,3.03],[25,yy,3.03]],'#bd9a71',.52)+laPath([[78,yy+1,3.03],[85,yy+.6,3.03],[94,yy+1,3.03]],'#bd9a71',.52);}
+ const diskMat=laMat('#986944'),iron=laMat('#5a5750'),wood=laMat('#9e7858'),light=laMat('#e0b97b');
+ const pl=cyl(x,y,3.03,4.35,17.3,diskMat)+cyl(x,y,4.35,5.8,11.3,iron)+cyl(x,y,5.8,7.5,20,diskMat)+laPath(laDisc(x,y,7.54,17.7).concat([laDisc(x,y,7.54,17.7)[0]]),'#b48756',.8);
+ laPart(items,[x-20,y-20,3],[x+20,y+20,7.5],pl);
+ // Material dishes contain the grey ground and the mixed lacquer.
+ laPart(items,[10,54,3],[18.2,62.2,5.6],laPigment(14.1,58.1,light,'#958879'));
+ laPart(items,[13.8,64.5,3],[22,72.7,5.6],laPigment(17.9,68.6,wood,st.color||laPals[st.pal]||laPals.tomato));
+ // Folded polishing cloth, with staggered corners, two selvage stripes and a fold.
+ let cloth='';for(let i=0;i<3;i++){
+  const z=3.15+i*.35,pts=[[79+i*.3,57,z],[90.2,58+i*.15,z],[91.5-i*.5,68,z],[79,67-i*.2,z]];
+  cloth+=shape(pts,i===2?'#ebdcc4':'#cbb99d',.85);
+  if(i===2){for(let k=0;k<2;k++)cloth+=laPath([[80.6+k*.62,57.5,z+.02],[80.5+k*.65,67,z+.02]],'#9d6a58',.57);cloth+=laPath([[84,66.9,z+.03],[87,62.3,z+.03],[90,59.7,z+.03]],'#bea990',.55);}
+ }laPart(items,[78.8,57,3],[91.5,68,4],cloth);
+
+ // The board primitive sits at z=0, so use an actual elevated, rectangular whetstone.
+ laPart(items,[79,46,3],[90,51.2,4.8],box(79,46,3,90,51.2,4.8,laMat('#898c82'))+laPath([[80,47,4.85],[86,48.5,4.85],[88,48.2,4.85]],'#aaa99b',.6));
+ // Bamboo brush: rectangular bristle fan and ferrule fixed to the end of a tapered handle.
+ const brush=(b,dx,dy,dz)=>{
+  const at=t=>[b[0]+dx*t,b[1]+dy*t,b[2]+dz*t],u=norm([-dy,dx,0]),fan=(t,v)=>at(t).map((k,i)=>k+v*u[i]);
+  let s=rod(at(0),at(.62),.61,wood,toneI,.82,.96)+rod(at(.57),at(.69),1.05,iron,toneI,.73,1.3);
+  s+=shape([fan(.66,-1.25),fan(.66,1.25),fan(1,2.42),fan(1,-2.42)],'#b8895d',.9);
+  for(let i=-2;i<=2;i++)s+=laPath([fan(.70,i*.48),fan(.99,i*.91)],'#624634',.52);return s;
+ };
+ let a=[40,71.5,3.9],dx=20,dy=-2,dz=0;
+ if(st.running&&st.step===2){const phi=.5+st.motion*laTau*1.25,rad=laShapes[st.shape].r*.78;
+  let dest=[x+Math.cos(phi)*rad,y+Math.sin(phi)*rad,7.5+laShapes[st.shape].h*.57];
+  a=[dest[0]+13,dest[1]+5,dest[2]+8];dx=-13;dy=-5;dz=-8;}
+ laPart(items,[Math.min(a[0],a[0]+dx)-2,Math.min(a[1],a[1]+dy)-2,Math.min(a[2],a[2]+dz)-.7],[Math.max(a[0],a[0]+dx)+2,Math.max(a[1],a[1]+dy)+2,Math.max(a[2],a[2]+dz)+.7],brush(a,dx,dy,dz));
+ const blade=[[32,66.8,3.4],[41,65.7,3.4],[41.5,68.9,3.4],[31.8,68.2,3.4]];
+ laPart(items,[21,65.5,3],[42,69,4.4],rod([23,68.3,3.9],[33,67.6,3.9],.68,light,toneI,.7,1)+shape(blade,'#9d7957',.84));
+ return {paper,items,top};
+}
+const laMod=(a,n)=>((a%n)+n)%n;
+function laOrnament(kind){
+ const lines=[],add=(uv,w=.95)=>lines.push([uv,w]);
+ // Coordinates wrap around the wall. Every fragment is assigned to its own surface tile.
+ for(const t of [.14,.17,.80,.84,.945])add(Array.from({length:161},(_,i)=>[i*laTau/160,t]),t===.945?1.9:t===.84?1.25:.74);
+ const count=kind==='petals'?12:kind==='cloud'?7:10;
+ for(let k=0;k<count;k++){
+  const period=laTau/count,ang=(u,v)=>[(k+u)*period,v],poly=(coords,w)=>add(coords.map(([u,v])=>ang(u,v)),w);
+  if(kind==='cloud'){
+   // One asymmetrical cloud curled around a small spiral; the second stroke is its trailing tail.
+   poly([[.04,.40],[.16,.43],[.25,.48],[.30,.55],[.34,.61],[.40,.64],[.45,.63],[.48,.60],[.51,.62],[.56,.66],[.61,.67],[.66,.65],[.70,.61],[.71,.57],[.75,.59],[.79,.59],[.83,.56],[.83,.52],[.79,.49],[.70,.49],[.63,.51],[.60,.55],[.62,.58],[.66,.57]],1.8);
+   poly([[.02,.36],[.15,.37],[.27,.42],[.37,.48],[.43,.51],[.49,.51],[.54,.49],[.60,.45],[.70,.42],[.80,.42],[.91,.46],[.98,.50]],1.18);
+   poly([[.34,.37],[.42,.40],[.49,.40],[.55,.38],[.63,.34],[.72,.33],[.78,.35]],.75);
+  }else if(kind==='petals'){
+   for(const side of [-1,1]){const pts=[];for(let j=0;j<=16;j++){const u=j/16;pts.push(ang(.5+side*.39*Math.sin(Math.PI*u)*(1-.30*u),.29+.46*u));}add(pts,1.55);}
+   poly([[.5,.32],[.49,.42],[.5,.57],[.5,.66]],.83);poly([[.91,.53],[.99,.61],[1.07,.54],[.99,.46],[.91,.53]],.9);
+  }else{for(const h of [.33,.38,.58,.63]){add(Array.from({length:17},(_,j)=>ang(j/16,h)),h===.38||h===.58?1.36:.75);}
+   poly([[.35,.48],[.5,.53],[.65,.48],[.5,.43],[.35,.48]],1.1);}
+ }
+ return lines;
+}
+const laMotifs=Object.fromEntries(['cloud','rings','petals'].map(k=>[k,laOrnament(k)]));
+function laVessel(st,x,y,base,v){
+ const shapeDef=laShapes[st.shape],profile=st.profile||shapeDef.p,ex=ease(laClamp(st.explode||0)),xr=ease(laClamp(st.xr||0));
+ const h=shapeDef.h*(st.demo||st.exhibit?1:.60+.40*laClamp(v)),R=shapeDef.r;
+ const radius=t=>{const u=laClamp(t)*11,i=Math.min(10,Math.floor(u));return Math.max(1.25,R*laLerp(profile[i],profile[i+1],u-i));};
+ const design=st.color||laPals[st.pal]||laPals.tomato,ac=st.accent||'#E5BE70',paint=laMat(design,.22),innerPaint=laMat(mix(design,'#29121a',.29),.12);
+ const coat=laClamp(v-2),ground=laClamp(v-1),decor=laClamp(v-3),faceList=[],floorPieces=[],decorCells=new Map();
+ const maskCenter=.62,rel=a=>Math.abs(laMod(a-maskCenter+Math.PI,laTau)-Math.PI);
+ // The removed coating samples are only the front sector. The rest of the vessel stays put.
+ function band(a){
+  const d=rel(a),gap=Math.max(xr,ex);
+  if(d<.31*xr)return -1;
+  if(d<.69*gap)return 0;
+  if(d<1.08*gap)return 1;
+  return 2;
+ }
+ function displacement(l){return l===1?[-ex*4.5,ex*9,ex*12]:l===2?[ex*12,-ex*6,ex*23]:[0,0,0];}
+ function pt(a,t,l=2,inner=false,moved=false){
+  const thick=st.shape==='plate'?1.1:1.8, radial=inner?-(thick+.6):l===0?-1.02:l===1?-.52:0,rad=Math.max(.58,radius(t)+radial);
+  const d=moved?displacement(l):[0,0,0],floor=inner?(st.shape==='plate'?1.2:2.3)*(1-t):0;
+  return [x+rad*Math.cos(a)+d[0],y+rad*Math.sin(a)+d[1],base+t*h+floor+d[2]];
+ }
+ function painted(a){const g=laMod(a+.63,laTau)/laTau;return coat>=.999||g<coat?2:ground>=.999||g<ground?1:0;}
+ function material(type,inner){return type===2?inner?innerPaint:paint:type===1?laGrey:laWood;}
+ function push(points,svg,order=0){if(svg)faceList.push({d:depthOf(avg(points))+order,svg});}
+ const decoColor=mix(ac,'#f9edc6',.08);
+ // Split every decorative path along the angular and vertical grid edges before projection.
+ if(decor>.001){for(const [pts,width] of laMotifs[st.pattern]){
+  for(let i=1;i<pts.length;i++){
+   const p=pts[i-1],q=pts[i],bounds=[0,1],aa=q[0]-p[0],dt=q[1]-p[1];
+   if(aa!==0){for(let k=Math.floor(Math.min(p[0],q[0])/laW)+1;k*laW<Math.max(p[0],q[0]);k++)bounds.push((k*laW-p[0])/aa);}
+   if(dt!==0){for(let k=Math.floor(Math.min(p[1],q[1])*11)+1;k/11<Math.max(p[1],q[1]);k++)bounds.push((k/11-p[1])/dt);}
+   bounds.sort((a,b)=>a-b);for(let j=1;j<bounds.length;j++){
+    const lo=bounds[j-1],hi=bounds[j],mid=(lo+hi)/2,am=p[0]+aa*mid,tm=p[1]+dt*mid;
+    if(laMod(am,laTau)>laTau*decor)continue;
+    const key=laMod(Math.floor(am/laW),laN)*11+Math.min(10,Math.floor(tm*11));
+    if(!decorCells.has(key))decorCells.set(key,[]);
+    decorCells.get(key).push([p[0]+aa*lo,p[1]+dt*lo,p[0]+aa*hi,p[1]+dt*hi,width]);
+   }
+  }
+ }}
+ const footR=Math.max(1.1,radius(0)*.94);
+ const foot=cyl(x,y,base-1.7,base,footR,material(v>=3?2:0,false),toneI,1.65,40);
+ const ca=Array.from({length:laN+1},(_,i)=>i*laW);
+ for(let i=0;i<laN;i++){
+  const a=ca[i],b=ca[i+1],am=(a+b)/2,B=band(am),type=painted(am);
+  const layers=B<0?[]:[{l:Math.min(B,type),m:false}];
+  if(ex>.001&&rel(am)<.70){if(type>=1&&rel(am)<.52)layers.push({l:1,m:true});if(type>=2)layers.push({l:2,m:true});}
+  for(const {l,m} of layers)for(let j=0;j<11;j++){
+   const u=j/11,w=(j+1)/11,slope=(radius(w)-radius(u))/(h/11);
+   const n=norm([Math.cos(am),Math.sin(am),-slope]);
+   const ps=[pt(a,u,l,false,m),pt(b,u,l,false,m),pt(b,w,l,false,m),pt(a,w,l,false,m)];
+   if(vis(n)){
+    const col=toneI(n,material(l,false));let art=face(pd(ps),col);
+    const pvis=alpha=>vis(norm([Math.cos(alpha),Math.sin(alpha),-slope]));
+    if(!pvis(am-laW))art+=line([ps[0],ps[3]],2.25);
+    if(!pvis(am+laW))art+=line([ps[1],ps[2]],2.25);
+    if(j===0||m&&j===1)art+=laPath([ps[0],ps[1]],'#544031',.6);
+    if(l===2&&decor>.001){const frags=decorCells.get(i*11+j)||[];
+     // Batch identical gold strokes by tile to keep drag and turntable responsive.
+     const byW=new Map();for(const [a1,y1,a2,y2,ww] of frags){const key=String(ww);byW.set(key,(byW.get(key)||'')+pd([pt(a1,y1,l,false,m),pt(a2,y2,l,false,m)],false));}
+     for(const [ww,d] of byW)art+='<path d="'+d+'" fill="none" stroke="'+decoColor+'" stroke-width="'+ww+'" stroke-linecap="round"/>';
+    }else if(l===0&&(j===2||j===5||j===8||j===9)){
+     const f1=u+(.35+.17*Math.sin(a*3+.49*j))/11,f2=u+(.35+.17*Math.sin(b*3+.49*j))/11;
+     art+=laPath([pt(a,f1,l,false,m),pt(b,f2,l,false,m)],'#936c48',.88);
+    }else if(l===1&&j%3===1&&i%2===0){
+     art+=laPath([pt(a+.02,u+.034,l,false,m),pt(a+.08,u+.038,l,false,m)],'#b9b1a3',.64);}
+    push(ps,art);
+   }
+   if(m&&!vis(n)){const back=ps.map(p=>[p[0]-.43*Math.cos(am),p[1]-.43*Math.sin(am),p[2]]);push(back,face(pd(back),toneI(n.map(k=>-k),l===2?laMat(mix(design,'#735a46',.53)):laGrey)));}
+   // Exposed cut edges join the outer profile to the lining; departing fragments have thin edges.
+   for(const [angle,side,adj] of [[a,-1,am-laW],[b,1,am+laW]]){
+    if((m?rel(adj)>=(l===1?.52:.70):B!==band(adj))&&vis([-side*Math.sin(angle),side*Math.cos(angle),0])){
+     const toInner=(t)=>m?pt(angle,t,Math.max(0,l-1),false,true).map((p,k)=>p+displacement(l)[k]-displacement(Math.max(0,l-1))[k]):pt(angle,t,l,true);
+     const es=[pt(angle,u,l,false,m),pt(angle,w,l,false,m),toInner(w),toInner(u)];
+     push(es,shape(es,l===2?ac:l===1?'#b0a18b':'#d4a46b',.46),.03);
+    }
+   }
+   if(j===10){const is=ps.slice(2).reverse(),inside=[pt(b,1,l,true,m),pt(a,1,l,true,m)],rim=[...is,...inside];
+    push(rim,face(pd(rim),l===2?mix(ac,design,.28):material(l,false).l)+laPath(is,l===2?'#452b28':'#70523a',1.15)+laPath(inside,'#533a31',.65),.05);}
+  }
+  if(B<0)continue;
+  for(let j=0;j<11;j++){const u=j/11,w=(j+1)/11,slope=(radius(w)-radius(u))/(h/11),n=norm([-Math.cos(am),-Math.sin(am),slope]);
+   if(!vis(n))continue;const l=type,ps=[pt(a,u,l,true),pt(b,u,l,true),pt(b,w,l,true),pt(a,w,l,true)];
+   let art=face(pd(ps),toneI(n,material(l,true)));
+   if(j===9&&decor>.50)art+=laPath([pt(a,.895,l,true),pt(b,.895,l,true)],mix(ac,design,.45),.75);
+   push(ps,art);}
+  const pf=[pt(a,0,type,true),pt(b,0,type,true),[x,y,base+(st.shape==='plate'?1.2:2.3)]];
+  floorPieces.push(face(pd(pf),material(type,true).m));
+ }
+ // Center medallion inside the vessel, physically behind the front wall.
+ if(decor>.01&&st.shape!=='box'){const z=base+(st.shape==='plate'?1.2:2.3)+.02,r=Math.max(.3,(radius(0)-2.4)*.68);
+  const loop=(rr)=>{const d=laDisc(x,y,z,rr,48);return laPath(d.concat([d[0]]),mix(ac,design,.20),.9);};
+  let med=loop(r)+loop(r*.82);for(let i=0;i<8;i++){const a=i*laTau/8,p=[];
+   for(let j=0;j<=12;j++){const t=j*laTau/12,rr=r*(.32+.25*Math.cos(t)),th=a+.27*Math.sin(t);p.push([x+rr*Math.cos(th),y+rr*Math.sin(th),z+.03]);}
+   med+=laPath(p,ac,.76);}floorPieces.push(med);}
+ push([[x,y,base+(st.shape==='plate'?1.2:2.3)]],floorPieces.join(''),.02);
+ let lidHeight=0;
+ if(st.shape==='box'&&v>0.06){const z=base+h+(.40+ex*10+xr*4),rr=radius(1)*1.015;lidHeight=z-base-h+3.4;
+  let cover=cyl(x,y,z,z+2.15,rr,material(v>=3?2:v>=2?1:0,false),toneI,1.6,48);
+  if(decor>.1){for(const r of [.86,.91]){const q=laDisc(x,y,z+2.17,rr*r);cover+=laPath(q.concat([q[0]]),ac,1.05);}
+   for(let i=0;i<8;i++){let loop=[];for(let j=0;j<=20;j++){const th=j*laTau/20,rad=rr*(.34+.25*Math.cos(th)),ang=i*laTau/8+.19*Math.sin(th);loop.push([x+rad*Math.cos(ang),y+rad*Math.sin(ang),z+2.18]);}
+    cover+=laPath(loop,ac,1.12);}}
+  cover+=cyl(x,y,z+2.15,z+2.85,2.1,laMat(ac),toneI,.83)+cyl(x,y,z+2.85,z+4.4,2.7,material(v>=3?2:0,false));
+  faceList.push({d:Infinity,svg:'<g opacity="'+(1-.70*xr)+'">'+cover+'</g>'});}
+ const at=(a,t,l=2,m=false)=>pt(a,t,l,false,m);
+ return {svg:foot+faceList.sort((a,b)=>a.d-b.d).map(a=>a.svg).join(''),h:h+lidHeight,R,at,ex,xr};
+}
+function laScene(st,pal){
+ const x=st.exhibit?37:49,y=st.exhibit?37:39,base=st.exhibit?5:9.2;
+ const v=st.demo||st.exhibit?4:st.step+(st.running?ease(st.motion):0),model=laVessel(st,x,y,base,v);
+ const r=model.R,h=model.h,ex=model.ex,xr=model.xr;
+ if(st.exhibit){
+  const z=base-1.7,sh=laDisc(x,y,z,r*.64,32);return '<g opacity=".16">'+castShadow(sh,0)+'</g>'+model.svg;
+ }
+ const bench=laTools(st,v,x,y),vShadow=laDisc(x,y,base+h*.58,r*.88);
+ let back=bench.paper+'<g opacity=".41">'+castShadow(vShadow,3,bench.top)+'</g>';
+ laPart(bench.items,[x-r,y-r,base-1.7],[x+r+12*ex,y+r+9*ex,base+h+23*ex],model.svg);
+ const tags=[{at:model.at(1.13,.50,0),text:'实木胎',on:st.running&&st.step===0},
+  {at:[14,58,5.5],text:'灰料盘',on:st.running&&st.step===1},
+  {at:[18,69,5.6],text:'漆盏',on:st.running&&st.step===2}];
+ if(v>1.01)tags.push({at:model.at(ex?.62:1.41,.63,1,ex>.02),text:'底灰层',on:st.running&&st.step===1});
+ if(v>2.01)tags.push({at:model.at(ex?.74:1.87,.72,2,ex>.02),text:'髹漆层',on:st.running&&st.step===2});
+ if(v>3.01)tags.push({at:model.at(2.1,.52),text:'漆面饰纹',on:st.running&&st.step===3});
+ if(st.shape==='box')tags.push({at:[x,y,base+h],text:'盒盖钮'});
+ return back+byDepth(bench.items)+((xr>.16||ex>.16)?xrCallouts(tags,[x-r,x+r,y-r,y+r,base,base+h+12*ex]):'');
+}
+function laRun(i,st,u){
+ if(st.exhibit)return;if(st.running)return u.flash('这道工序正在进行');
+ if(i!==st.step)return u.flash(i<st.step?'这道工序已完成':'请先完成「'+laSteps[st.step]+'」');
+ st.demo=false;st.running=true;st.motion=0;const gen=st.generation;
+ u.animate(dt=>{if(gen!==st.generation)return false;st.motion=laClamp(st.motion+dt/[1.25,1.45,1.85,1.55][i]);st.progress=(i+st.motion)/4;
+  if(st.motion<1)return true;st.step=i+1;st.done=st.step===4;st.running=false;st.motion=0;return false;});
+}
+function laReset(st,u){if(st.exhibit)return;st.generation++;Object.assign(st,{demo:true,step:0,done:false,progress:0,motion:0,running:false});u.flash('可重新从木胎开始制作');}
+const laExhibit=typeof location!=='undefined'&&new URLSearchParams(location.search).get('exhibit')==='1';
+const ui=mountFigure({fig:'06',title:'成都漆艺 · 髹饰器物',turn:'full',palette:'tomato',size:laExhibit?[74,74,50]:[100,80,57],
+ state:{shape:'bowl',profile:null,color:null,accent:'#E5BE70',pattern:'cloud',step:0,demo:true,done:false,progress:0,motion:0,explode:0,running:false,generation:0,exhibit:false},
+ buttons:laSteps.map((label,i)=>({label,onClick:(st,u)=>laRun(i,st,u)})).concat({label:'重新制作',onClick:laReset}),scene:laScene,params:laParams,
+ stats:st=>[{label:'完成工序',value:st.step+' / 4'}],readout:st=>st.demo?'样器陈列':st.done?'漆器已成':laSteps[st.step]});
+window.heritageUI=ui;window.heritageId='lacquer';xrMount(()=>ui,()=>'');
+</script><script src="../assets/lacquer-model.js"></script><script src="../assets/figure-bridge.js"></script></body></html>

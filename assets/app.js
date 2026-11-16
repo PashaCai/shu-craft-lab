@@ -4,6 +4,9 @@
   const crafts = window.CRAFTS;
   const frame = $('craft-frame');
   const dialog = $('info-dialog');
+  const lacquerColors = {tomato:'#A53A32',mustard:'#AA782F',mint:'#38796C',cobalt:'#345674',blush:'#9B5676'};
+  const lacquerDesign = () => ({shape:$('lacquer-shape').value,color:$('lacquer-color').value,accent:'#E3B76E',pattern:$('lacquer-pattern').value});
+  const figureURL = craft => 'figures/'+craft.id+'.html'+(craft.id==='lacquer'?'?'+new URLSearchParams(lacquerDesign()):'');
   let current = crafts.find(c=>c.id===location.hash.slice(1)) || crafts[0];
   let currentState = {progress:0,step:0,done:false};
   let saved = {}, notes = '', toastTimer, loadTimer, ready = false, tab = 'make';
@@ -28,13 +31,14 @@
   function renderCatalog(){
     $('craft-nav').innerHTML=crafts.map((c,i)=>`<a href="#${c.id}" class="craft-link" ${c.id===current.id?'aria-current="page"':''}><span class="craft-icon">${craftIcon(c)}</span><span><span class="craft-index">CRAFT 0${i+1}</span><strong>${c.name}</strong><span class="craft-place">${c.place}</span></span>${saved[c.id]?'<span class="craft-done" aria-label="已收藏">✓</span>':''}</a>`).join('');
     const count=Object.keys(saved).filter(id=>crafts.some(c=>c.id===id)).length;
-    $('notebook-count').textContent=count;$('visited-count').textContent=`${count} / 5`;$('visited-fill').style.width=`${count*20}%`;
+    $('notebook-count').textContent=count;$('visited-count').textContent=`${count} / ${crafts.length}`;$('visited-fill').style.width=`${count/crafts.length*100}%`;
     if(innerWidth<=620){const selected=$('craft-nav').querySelector('[aria-current=page]');$('craft-nav').scrollLeft=selected.offsetLeft-$('craft-nav').clientWidth/2+selected.clientWidth/2;}
   }
-  function setTab(value){tab=value;for(const which of ['make','learn']){$(`tab-${which}`).setAttribute('aria-selected',which===value);$(`${which}-panel`).hidden=which!==value;}}
+  function setTab(value){tab=value;for(const which of ['make','learn']){const button=$(`tab-${which}`);button.setAttribute('aria-selected',which===value);button.tabIndex=which===value?0:-1;$(`${which}-panel`).hidden=which!==value;}}
   function renderProgress(){
     const progress=Math.round(Math.max(0,Math.min(1,currentState.progress||0))*100);
     const complete=currentState.done;
+    $('lacquer-save').disabled=current.id!=='lacquer'||!ready||!complete;
     const count=Math.max(0,Math.min(4,currentState.step||0));
     $('process-list').innerHTML=current.steps.map((step,i)=>`<li class="${i<count?'complete':i===count&&!complete?'current':''}"><span class="step-number">${i<count?'✓':String(i+1).padStart(2,'0')}</span><strong>${step[0]}</strong><p>${step[1]}</p></li>`).join('');
     $('progress-label').textContent=complete?'一件手作，亲手完成':progress>0?'手艺正在发生':'从第一步，开始体验';
@@ -43,7 +47,7 @@
     $('collect-work').querySelector('span').textContent=saved[current.id]?'已收进手记 · 再存一份':'收进我的手记';
     $('collect-hint').textContent=complete?'做到了！把这次体验留在你的学习手记里。':'完成制作，收藏你的第一件非遗作品。';
     for(const [id,key] of [['xray-toggle','xray'],['labels-toggle','labels'],['explode-toggle','exploded'],['spin-toggle','spinning']])$(id).setAttribute('aria-pressed',!!currentState[key]);
-    document.querySelectorAll('[data-palette]').forEach(el=>el.setAttribute('aria-pressed',el.dataset.palette===currentState.palette));
+    document.querySelectorAll('[data-palette]').forEach(el=>el.setAttribute('aria-pressed',current.id==='lacquer'?lacquerColors[el.dataset.palette]===$('lacquer-color').value.toUpperCase():el.dataset.palette===currentState.palette));
     $('zoom-reset').textContent=`${Math.round((currentState.zoom||1)*100)}%`;
     $('part-legend').innerHTML=(currentState.parts||[]).map(part=>`<span><b>${escape(part.number)}</b>${escape(part.name)}</span>`).join('');
   }
@@ -68,16 +72,17 @@
     $('loading').hidden=false;frame.classList.remove('ready');frame.title=`${craft.name}互动工坊：可旋转、透视与拆解`;
     document.title=`${craft.name} · 蜀作非遗互动工坊`;
     renderCatalog();renderQuiz();renderProgress();setTab(tab);
-    frame.src=`figures/${craft.id}.html`;
+    $('lacquer-options').hidden=craft.id!=='lacquer';
+    frame.src=figureURL(craft);
     clearTimeout(loadTimer);loadTimer=setTimeout(()=>{if(!ready){$('loading').querySelector('span:last-child').textContent='场景尚未加载，点这里重新打开工作台';$('loading').style.cursor='pointer';}},12000);
   }
   function openDialog(title,html){$('dialog-kicker').textContent=title;$('dialog-content').innerHTML=html;if(!dialog.open)dialog.showModal();}
-  function openAbout(){openDialog('关于工坊 · 手艺有来处',`<span class="dialog-label">SHU CRAFT LAB</span><h2>让传统手艺，<br>在指尖发生。</h2><p>蜀作是一间为学生准备的四川非遗互动工坊。这里把手艺的材料、结构和关键工序，变成可以旋转、拆解和操作的立体小模型。先观察，再动手，最后带走一个自己的发现。</p><h3>我们怎样呈现这些手艺</h3><p>模型为课堂简化示意，工序经过提炼，针线、篾条等细节适当放大。它帮助理解工艺关系，不能代替传承人的现场教学。五个场景的造型与纹样为本项目原创。</p><h3>资料与参考</h3><ul>${crafts.map(c=>`<li><a href="${c.source}" target="_blank" rel="noopener">${c.sourceTitle}</a></li>`).join('')}<li><a href="https://www.lantern-museum.cn/product/2084114740.html" target="_blank" rel="noopener">中国彩灯博物馆 · 自贡彩灯传统制作技艺</a></li></ul><p>国家级项目中，与本灯彩工坊相关的是“灯会（自贡灯会）”；彩灯传统制作技艺另有省级项目。这里不把不同名录混为同一个项目。</p><h3>绘图引擎与美术参考</h3><p>使用 <a href="https://april-zhu.com/colorfigures" target="_blank" rel="noopener">April Zhu 的 Colorfigures</a> 绘图引擎与手绘风格。保留 MIT 许可和原作者署名，模型可在离线环境运行。<a href="assets/COLORFIGURES-LICENSE.txt" target="_blank">查看许可证</a>。</p><p>学习记录仅保存在当前浏览器，无需注册；可下载自己的作品与学习手记。</p>`);}
-  function openHelp(){openDialog('第一次来 · 把手艺玩明白',`<h2>转一转，拆开看，亲手做。</h2><ol><li><b>选一间工坊。</b>左侧的五门手艺，每一门都有不同的材料和方法。</li><li><b>拖动模型。</b>按住模型空白处左右拖动可旋转，上下拖动改变俯仰；滚轮或 ＋ / − 缩放。双击或“回到正面”恢复视角。</li><li><b>按工序制作。</b>从工作台左上的第一个操作按钮开始，每一步都会让材料和工具动起来。顺序不对时，工坊会给出提示。</li><li><b>看内部与拆解。</b>“透视内部”让外层变淡；“拆开看看”把部件分开；“部件标注”显示它们的名称。再次点击可以合回去。</li><li><b>完成并收藏。</b>进度达到 100% 后，把作品收入学习手记；“读懂它”中还有一道小问题。</li></ol><h3>给老师</h3><p>点击右上角“课堂演示”，放大工作台，适合投屏讲解。可先让同学猜一猜结构，再拆开验证；五间工坊也适合进行经纬、针线与编织的比较观察。</p><p>键盘也能旋转：先点一下工作台空白处，再使用方向键。所有操作按钮都可以用 Tab 键选择。</p>`);}
+  function openAbout(){openDialog('关于工坊 · 手艺有来处',`<span class="dialog-label">SHU CRAFT LAB</span><h2>让传统手艺，<br>在指尖发生。</h2><p>蜀作是一间为学生准备的四川非遗互动工坊。这里把手艺的材料、结构和关键工序，变成可以旋转、拆解和操作的立体小模型。先观察，再动手，最后带走一个自己的发现。</p><h3>我们怎样呈现这些手艺</h3><p>模型为课堂简化示意，工序经过提炼，针线、篾条等细节适当放大。它帮助理解工艺关系，不能代替传承人的现场教学。六个场景的造型与纹样为本项目原创。</p><h3>资料与参考</h3><ul>${crafts.map(c=>`<li><a href="${c.source}" target="_blank" rel="noopener">${c.sourceTitle}</a></li>`).join('')}<li><a href="https://www.lantern-museum.cn/product/2084114740.html" target="_blank" rel="noopener">中国彩灯博物馆 · 自贡彩灯传统制作技艺</a></li></ul><p>国家级项目中，与本灯彩工坊相关的是“灯会（自贡灯会）”；彩灯传统制作技艺另有省级项目。这里不把不同名录混为同一个项目。</p><h3>绘图引擎与美术参考</h3><p>使用 <a href="https://april-zhu.com/colorfigures" target="_blank" rel="noopener">April Zhu 的 Colorfigures</a> 绘图引擎与手绘风格。保留 MIT 许可和原作者署名，模型可在离线环境运行。<a href="assets/COLORFIGURES-LICENSE.txt" target="_blank">查看许可证</a>。</p><p>成都漆艺的实物采集只提取器形和色彩，生成可旋转的教学插画。学习记录仅保存在当前浏览器，无需注册；可下载自己的作品与学习手记。</p>`);}
+  function openHelp(){openDialog('第一次来 · 把手艺玩明白',`<h2>转一转，拆开看，亲手做。</h2><ol><li><b>选一间工坊。</b>目录中的六门手艺，每一门都有不同的材料和方法。</li><li><b>拖动模型。</b>按住模型空白处左右拖动可旋转，上下拖动改变俯仰；滚轮或 ＋ / − 缩放。双击或“回到正面”恢复视角。</li><li><b>按工序制作。</b>从工作台中的第一个操作按钮开始，每一步都会让材料和工具动起来。顺序不对时，工坊会给出提示。</li><li><b>看内部与拆解。</b>“透视内部”让外层变淡；“拆开看看”把部件分开；“部件标注”显示它们的名称。再次点击可以合回去。</li><li><b>完成并收藏。</b>进度达到 100% 后，把作品收入学习手记；“读懂它”中还有一道小问题。</li></ol><h3>给老师</h3><p>点击右上角“课堂演示”，放大工作台，适合投屏讲解。可先让同学猜一猜结构，再拆开验证；六间工坊也适合进行经纬、针线与编织的比较观察。</p><p>键盘也能旋转：先点一下工作台空白处，再使用方向键。所有操作按钮都可以用 Tab 键选择。</p>`);}
   function openCraftAbout(){openDialog(`工坊 0${crafts.indexOf(current)+1} · ${current.name}`,`<span class="dialog-label">四川 · ${current.place} / ${current.category}</span><h2>${current.title}</h2><p>${current.description}</p><h3>观察任务</h3><p>${current.look}</p><h3>这个模型简化了什么</h3><p>${current.note}</p><p><a href="${current.source}" target="_blank" rel="noopener">${current.sourceTitle} ↗</a></p><button class="dialog-button" id="go-explore">回到工作台，试试看</button>`);$('go-explore').onclick=()=>dialog.close();}
   function download(name,data,type){const url=URL.createObjectURL(new Blob([data],{type}));const link=document.createElement('a');link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   function downloadNotebook(){
-    const text=['蜀作 · 我的非遗学习手记','',`已完成 ${Object.keys(saved).length} / 5 间工坊`,'',...crafts.map(c=>`${saved[c.id]?'[已完成]':'[待体验]'} ${c.name}（四川 · ${c.place}）\n观察：${c.look}\n${saved[c.id]?.quiz?'已答对工艺小问题。':''}\n资料：${c.source}\n`),'我的发现',notes||'还没有写下发现。','','本学习手记由蜀作生成。模型为课堂简化示意。绘图引擎：Colorfigures / April Zhu。'].join('\n');
+    const text=['蜀作 · 我的非遗学习手记','',`已完成 ${Object.keys(saved).length} / ${crafts.length} 间工坊`,'',...crafts.map(c=>`${saved[c.id]?'[已完成]':'[待体验]'} ${c.name}（四川 · ${c.place}）\n观察：${c.look}\n${saved[c.id]?.quiz?'已答对工艺小问题。':''}\n资料：${c.source}\n`),'我的发现',notes||'还没有写下发现。','','本学习手记由蜀作生成。模型为课堂简化示意。绘图引擎：Colorfigures / April Zhu。'].join('\n');
     download('蜀作-我的非遗学习手记.txt',text,'text/plain;charset=utf-8');
   }
   function openNotebook(){
@@ -90,7 +95,7 @@
     if(event.source!==frame.contentWindow||event.origin!==location.origin||event.data?.id!==current.id)return;
     const message=event.data;
     if(message.type==='heritage:ready'){
-      ready=true;clearTimeout(loadTimer);$('loading').hidden=true;frame.classList.add('ready');$('loading').style.cursor='';
+      ready=true;if(current.id==='lacquer')frame.contentWindow.postMessage({type:'heritage:lacquer-design',...lacquerDesign()},location.origin);clearTimeout(loadTimer);$('loading').hidden=true;frame.classList.add('ready');$('loading').style.cursor='';
       frame.contentWindow.postMessage({type:'heritage:command',command:'wobble',value:$('wobble').value},location.origin);
     }
     if(message.type==='heritage:state'){currentState=message;renderProgress();}
@@ -99,22 +104,44 @@
       else{download(`蜀作-${current.name}-我的作品.svg`,message.svg,'image/svg+xml;charset=utf-8');toast('作品已导出为可缩放的 SVG 插画。');}
     }
   });
-  addEventListener('hashchange',()=>{const craft=crafts.find(c=>c.id===location.hash.slice(1));if(craft&&craft.id!==current.id)selectCraft(craft);});
+  function route(){const id=location.hash.slice(1),craft=crafts.find(c=>c.id===id);if(craft&&craft.id!==current.id)selectCraft(craft);if(id==='cabinet')window.LacquerCabinet.open();}
+  addEventListener('hashchange',route);
+  document.querySelectorAll('#open-cabinet,[data-cabinet="open"]').forEach(b=>b.onclick=()=>window.LacquerCabinet.open());
+  document.querySelectorAll('#open-camera,[data-cabinet="camera"]').forEach(b=>b.onclick=()=>window.LacquerCabinet.openCamera());
+  for(const id of ['lacquer-shape','lacquer-color','lacquer-pattern'])$(id).onchange=()=>{
+    if(current.id!=='lacquer')return;
+    if(ready)frame.contentWindow.postMessage({type:'heritage:lacquer-design',...lacquerDesign()},location.origin);
+    renderProgress();
+  };
+  $('lacquer-save').onclick=()=>{
+    if(!ready||current.id!=='lacquer'||!currentState.done)return;
+    const result=window.LacquerCabinet.saveWorkshop(lacquerDesign());
+    if(!result?.ok)return toast(result?.error||'这件作品尚未入柜，请重试。');
+    toast(result.persisted?'作品已放入漆器展示柜。':'作品已入柜；浏览器限制存储，仅在本次打开期间保留。');
+    window.LacquerCabinet.open();
+  };
   $('xray-toggle').onclick=()=>send('xray');$('labels-toggle').onclick=()=>send('labels');$('explode-toggle').onclick=()=>send('explode');$('front-view').onclick=()=>send('front');$('spin-toggle').onclick=()=>send('spin');
   $('zoom-in').onclick=()=>send('zoom',.1);$('zoom-out').onclick=()=>send('zoom',-.1);$('zoom-reset').onclick=()=>send('zoom','reset');
   $('wobble').oninput=event=>{$('wobble-value').textContent=event.target.value;send('wobble',event.target.value);};
-  document.querySelectorAll('[data-palette]').forEach(button=>button.onclick=()=>send('palette',button.dataset.palette));
+  document.querySelectorAll('[data-palette]').forEach(button=>button.onclick=()=>{
+    if(!ready)return send('palette',button.dataset.palette);
+    if(current.id==='lacquer')$('lacquer-color').value=lacquerColors[button.dataset.palette];
+    send('palette',button.dataset.palette);
+    if(current.id==='lacquer')$('lacquer-color').onchange();
+  });
   $('tab-make').onclick=()=>setTab('make');$('tab-learn').onclick=()=>setTab('learn');
+  for(const key of ['make','learn'])$('tab-'+key).onkeydown=e=>{const next={ArrowLeft:key==='make'?'learn':'make',ArrowRight:key==='make'?'learn':'make',Home:'make',End:'learn'}[e.key];if(next){e.preventDefault();setTab(next);$('tab-'+next).focus();}};
   $('craft-about').onclick=openCraftAbout;
   $('classroom').onclick=()=>{const active=document.body.classList.toggle('classroom');$('classroom').setAttribute('aria-pressed',active);$('classroom').querySelector('span').textContent=active?'退出课堂':'课堂演示';};
   document.querySelectorAll('[data-open]').forEach(button=>button.onclick=()=>{const key=button.dataset.open;if(key==='about')openAbout();if(key==='help')openHelp();if(key==='notebook')openNotebook();if(key==='workshop'){dialog.close();$('main').scrollIntoView({behavior:'smooth'});}});
   $('close-dialog').onclick=()=>dialog.close();dialog.addEventListener('click',event=>{if(event.target===dialog){const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)dialog.close();}});
   $('collect-work').onclick=()=>{
-    if(!currentState.done){setTab('make');return toast('先按顺序完成左侧四道工序，再收藏这件作品。');}
+    if(!currentState.done){setTab('make');return toast('先按顺序完成四道工序，再收藏这件作品。');}
     saved[current.id]={...saved[current.id],date:new Intl.DateTimeFormat('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'Asia/Shanghai'}).format(new Date()),palette:currentState.palette};
     persist();renderCatalog();renderProgress();toast(`${current.product}已收进手记。试试“读懂它”里的小问题。`);
     send('capture','save');
   };
-  $('loading').onclick=()=>{if(!ready){frame.src=`figures/${current.id}.html?reload=${Date.now()}`;$('loading').querySelector('span:last-child').textContent='正在重新摆好工作台…';}};
+  $('loading').onclick=()=>{if(!ready){const url=new URL(figureURL(current),location.href);url.searchParams.set('reload',Date.now());frame.src=url.href;$('loading').querySelector('span:last-child').textContent='正在重新摆好工作台…';}};
   selectCraft(current,true);
+  if(location.hash==='#cabinet')route();
 })();
