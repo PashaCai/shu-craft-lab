@@ -11,7 +11,7 @@
    frame side rails, rollers, journals, laces, ground, front and reverse stitches, needle,
    eye, working silk, reel pegs, coloured spools, small tray and needle cushion. */
 const xiuNames=['绷紧绣面','引丝穿针','晕色铺针','收针藏线'];
-const xiuNew=()=>({step:0,done:false,progress:0,busy:false,phase:0,t:0,epoch:0});
+const xiuNew=()=>({step:0,done:false,progress:0,busy:false,phase:0,t:0,epoch:0,manualPractice:null});
 const xiuAt=(s,n)=>s.step>=n?1:s.phase===n?s.t:0;
 const xiuLight={l:'#e7ba89',m:'#ba875f',d:'#8c5c46'},xiuWood={l:'#a97c61',m:'#8d604c',d:'#634637'},xiuGold={l:'#e4bc76',m:'#c1965d',d:'#906c4c'};
 const xiuStroke=(p,c,w,ext='')=>'<path d="'+pd(p,false)+'" fill="none" stroke="'+c+'" stroke-width="'+w+'" stroke-linecap="round" stroke-linejoin="round" '+ext+'/>';
@@ -88,7 +88,13 @@ function xiuDesign(map,work,tail,reverse=false){
  return svg;
 }
 function xiuScene(st,m){
- const ex=ease(st.explode||0),xr=ease(st.xr||0),tight=xiuAt(st,1),loaded=xiuAt(st,2),work=xiuAt(st,3),tail=xiuAt(st,4);
+ const ex=ease(st.explode||0),xr=ease(st.xr||0),h=st.manualPractice;
+ const manual=!st.busy&&!st.done&&h&&h.stage===st.step&&[0,1].includes(h.operation)&&Number.isFinite(h.ratio);
+ const stage=manual?h.stage:-1,op=manual?h.operation:-1,r=manual?xiuEase(h.ratio):0,active=n=>st.phase===n||stage===n-1;
+ const tight=stage===0?(op===0?.25*r:.25+.75*r):xiuAt(st,1);
+ const loaded=stage===1?(op===0?.25*r:.25+.75*r):xiuAt(st,2);
+ const work=stage===2?(op===0?(1/120)*r:1/120+(119/120)*r):xiuAt(st,3);
+ const tail=stage===3?(op===0?.75*r:.75+.25*r):xiuAt(st,4);
  const lacquer={l:mix(xiuLight.l,m.l,.68),m:mix(xiuWood.m,m.m,.6),d:mix(xiuWood.d,m.d,.55)};const off={base:[0,0,0],frame:[-3*ex,0,5*ex],silk:[3.5*ex,0,6*ex],front:[10*ex,0,7.3*ex],back:[-5.3*ex,0,4.4*ex],tools:[5*ex,0,0]},parts=[];
  const shift=(p,k)=>xiuSum(p,off[k||'base']);const stain=1-.59*xr;
  const put=(p,svg,r=0,op=1)=>{const b=xiuMinbox(p,r);parts.push({at:boxMid(b),box:b,svg:op<1?'<g opacity="'+f(op)+'">'+svg+'</g>':svg});};
@@ -102,7 +108,7 @@ function xiuScene(st,m){
  };
  const beamAt=z=>41-.41*(z-27);
  const uv=(y,z,dist=0)=>[beamAt(z)+dist,y,z+.41*dist];
- const fabric=(y,z,side=0)=>{const slack=(1-tight)*1.3*Math.sin(((y-14)/68)*Math.PI)*Math.sin(((z-30)/50)*Math.PI);return uv(y,z,side-slack);};
+ const fabric=(y,z,side=0)=>{const slack=(1-tight)*(stage===0?4.6:1.3)*Math.sin(((y-14)/68)*Math.PI)*Math.sin(((z-30)/50)*Math.PI);return uv(y,z,side-slack);};
  // Splayed feet, arched shoes and trestle pivots. The shelf is fastened to the low cross brace.
  for(const y of [5,91]){
    standFoot([[0,0],[14,0],[21,3.8],[20,5.6],[9,5.8],[1,3.7]],y-2.4,y+2.4,xiuWood,stain);
@@ -147,14 +153,19 @@ function xiuScene(st,m){
  for(const [y,rail] of [[14.8,9],[81.3,87]]){
   for(let z=32;z<77;z+=4.45){const a=shift(fabric(y,z,.1),'silk'),b=shift(uv(rail,z+1.7,.4),'frame'),c=shift(fabric(y,z+3.9,.1),'silk');put([a,b,c],xiuStroke([a,b,c],'#75694e',1.65)+xiuStroke([a,b,c],'#e5d0a5',.72));}
  }
+ if(stage===0&&op===0&&r>0){
+   const route=[shift(fabric(14.8,64,.15),'silk'),shift(uv(9,62,.5),'frame'),shift(fabric(14.8,59.55,.15),'silk'),shift(uv(9,57.55,.5),'frame'),shift(fabric(14.8,55.1,.15),'silk')];
+   const k=Math.min(3,Math.floor(r*4)),seg=[...route.slice(0,k+1),xiuInterp(route[k],route[k+1],r*4-k)];put(seg,xiuStroke(seg,'#a86644',2.6));
+ }
  const frontVis=vis([1,0,.41]),layer=frontVis?1:-1;
  // One thin ground with two surfaces. Strips shape the loose warp before the frame is tightened.
  const y0=14.8,y1=81.3,z0=29,z1=79.2;
  const clothMap=(y,z)=>shift(fabric(y,z,.04),'silk');
  const corner=[[y0,z0],[y1,z0],[y1,z1],[y0,z1]].map(([y,z])=>clothMap(y,z));
  let cloth='';
- for(let i=0;i<8;i++){const ya=y0+i*(y1-y0)/8,yb=y0+(i+1)*(y1-y0)/8, strip=[[ya,z0],[yb,z0],[yb,z1],[ya,z1]].map(([y,z])=>clothMap(y,z));
- cloth+=fill(pd(strip),mix('#f5e6cd','#e4cfa9',(1-tight)*.17*(1+Math.sin(i*.85))));}
+ for(let i=0;i<8;i++){const ya=y0+i*(y1-y0)/8,yb=y0+(i+1)*(y1-y0)/8,n=stage===0?4:1;
+ for(let row=0;row<n;row++){const a=z0+row*(z1-z0)/n,b=z0+(row+1)*(z1-z0)/n,strip=[[ya,a],[yb,a],[yb,b],[ya,b]].map(([y,z])=>clothMap(y,z));
+ cloth+=fill(pd(strip),mix('#f5e6cd','#e4cfa9',(1-tight)*.17*(1+Math.sin(i*.85))));}}
  cloth+=ink(pd(corner),1.25);
  for(const y of [15.5,16.1,79.9,80.5])cloth+=xiuStroke([clothMap(y,z0+.5),clothMap(y,z1-.5)],'#bda887',.83,'stroke-dasharray="1 .85"');
  for(let z=31;z<79;z+=3.8)cloth+=xiuStroke([clothMap(16.5,z),clothMap(79.6,z+.18)],'#d6bf9e',.6,'opacity=".46"');
@@ -185,29 +196,65 @@ function xiuScene(st,m){
  const farStitches=revealLayers?stitches(-layer):'';
  const ground='<g data-textile-ground="" opacity="'+(1-.81*xr)+'">'+cloth+'</g>';
  const nearStitches=stitches(layer);
- put(clothBounds,farStitches+farThread+ground+nearThread+nearStitches);
+ if(stage!==2&&stage!==3)put(clothBounds,farStitches+farThread+ground+nearThread+nearStitches);
  // Working needle: front-to-back passes follow the direction of the corresponding flower's silk.
  const k=Math.min(119,Math.floor(work*120)),frac=work*120-k,ps=xiuB[Math.floor(k/24)].strokes[k%24];
  let uvN=ps[Math.min(5,Math.floor(frac*6))];if(st.step>=3||st.phase===4)uvN=[61,66+tail*4.8];
  const sew=st.phase===3?Math.sin((st.t*22)*Math.PI*2):st.phase===4?Math.cos(st.t*6*Math.PI):0;
  let needleDist=3.5+sew*5.3;
- const needleTarget=shift(fabric(...uvN,needleDist),'front'),home=shift([46,69.8,21],'tools');
+ if(stage===2){
+   if(op===0){
+     // In section: rise through the first puncture, lay the silk in the petal direction,
+     // then descend into the second hole. The needle never travels under the whole petal.
+     const stitch=xiuB[0].strokes[0],along=xiuEase((r-.26)/.46)*5,j=Math.min(4,Math.floor(along));
+     uvN=xiuInterp(stitch[j],stitch[j+1],along-j);
+     needleDist=r<.26?-5+12*r/.26:r<.72?7:7-16*(r-.72)/.28;
+   }else{needleDist=1+5*Math.cos(r*10*Math.PI);}
+ }
+ if(stage===3){
+   const slide=op===0?r:1;
+   uvN=[60+2*slide,66.7+3.3*slide];needleDist=op===0?-2.7-.85*Math.sin(r*Math.PI):-2.7-4*r;
+ }
+ const distLayer=needleDist<0?'back':'front',needleTarget=shift(fabric(...uvN,needleDist),distLayer),home=shift([46,69.8,21],'tools');
  let tip=xiuInterp(home,needleTarget,ease(loaded)),eye=xiuSum(tip,[4.3,3.1,4.15]);
+ if(stage===1){tip=xiuInterp(home,needleTarget,op===0?.28*r:.28+.72*xiuEase((r-.72)/.28));eye=xiuSum(tip,[4.3,3.1,4.15]);}
+ if(stage===3)eye=xiuSum(tip,[-1.5,-4,-1.9]);
  if(st.done){tip=home;eye=xiuSum(tip,[1.55,-1.45,5]);}
- rr(tip,eye,.12,METAL,'base',1.15,.36);const hole=xiuSum(eye,[-.45,-.32,-.48]);
- if(st.phase===2 ||st.step>=2&&!st.done){
+ let farNeedle='',nearNeedle='';
+ if(stage===2||stage===3){
+   const normalDepth=p=>(p[0]-beamAt(p[2]))/1.1681;
+   const renderPiece=(a,b,side)=>{const svg=rod(a,b,.21,METAL,tone,.95,.27,10);if(side===layer)nearNeedle+=svg;else farNeedle+=svg;};
+   const zero=normalDepth(shift(fabric(...uvN,0),distLayer)),v=normalDepth(tip)-zero,w=normalDepth(eye)-zero;
+   if(v*w<0){const mid=xiuInterp(tip,eye,v/(v-w));renderPiece(tip,mid,Math.sign(v));renderPiece(mid,eye,Math.sign(w));}
+   else renderPiece(tip,eye,Math.sign(v)||1);
+ }else rr(tip,eye,.12,METAL,'base',1.15,.36);
+ const hole=xiuSum(eye,[-.45,-.32,-.48]);
+ if(stage===1){const ring=Array.from({length:15},(_,i)=>{const t=i*2*Math.PI/14;return xiuSum(hole,[.59*Math.cos(t),.31*Math.cos(t)+.32*Math.sin(t),.65*Math.cos(t)-.24*Math.sin(t)]);});put(ring,xiuStroke(ring,'#49565a',1.4));}
+ if(stage===1&&op===1){
+   const start=shift([47,34,21],'tools'),thread=xiuCurveList(start,xiuSum(start,[5,4,4]),xiuSum(hole,[1,-6,-1]),hole,22);
+   const reach=xiuEase(r/.72)*22,j=Math.min(21,Math.floor(reach));
+   const fed=[...thread.slice(0,j+1),xiuInterp(thread[j],thread[j+1],reach-j)];
+   if(r>.72)fed.push(xiuSum(hole,[.3,4.25*(r-.72)/.28,-1.5*(r-.72)/.28]));
+   put(fed,xiuStroke(fed,'#ab5267',2.25)+xiuStroke(fed,'#f3b6b2',.72));
+ }else if(stage===2||stage===3){
+   const face=needleDist<0?-1:1,a=shift(fabric(...uvN,.3*face),distLayer);
+   const length=stage===3?1.2*(1-r):3.2;
+   const thread=xiuCurveList(a,xiuSum(a,[face*length,1,.65]),xiuSum(hole,[face*length*.6,-1,.3]),hole,8);
+   const svg=xiuStroke(thread,'#a75668',1.9);if(face===layer)nearNeedle+=svg;else farNeedle+=svg;
+ }else if(st.phase===2 ||st.step>=2&&!st.done){
    const touch=shift(fabric(...uvN,.4),'front');
    const start=st.phase===2?shift([47,34,21],'tools'):touch;
    const thread=xiuCurveList(start,xiuSum(start,[6.5,-.75,-2.4]),xiuSum(hole,[2.5,-4.75,-3.2]),hole,14);
    put(thread,xiuStroke(thread,'#994756',2.05)+xiuStroke(thread,'#ec9297',.65));
  }
+ if(stage===2||stage===3)put(clothBounds,farStitches+farThread+farNeedle+ground+nearThread+nearStitches+nearNeedle);
  const shade=castShadow([[0,3,0],[56,3,0],[56,92,0],[0,92,0],[17,81,78],[17,14,78]]);
- let cues=[{at:shift(uv(31,80.7),'frame'),text:'卷绷杆',on:st.phase===1},{at:clothMap(23,58),text:'软缎',on:st.phase===1},{at:eye,text:'绣针',on:st.phase===2||st.phase===3},{at:surface(layer,layer===1?'front':'back')(61,66),text:layer===1?'正面针迹':'背面针迹',on:st.phase===3||st.done},{at:shift([46.7,34,20.3],'tools'),text:'丝线',on:st.phase===2}];
+ let cues=[{at:shift(uv(31,80.7),'frame'),text:'卷绷杆',on:active(1)},{at:shift(uv(9,61),'frame'),text:'侧边绷绳',on:active(1)},{at:clothMap(23,58),text:'软缎',on:active(1)},{at:eye,text:'绣针',on:active(2)||active(3)},{at:surface(layer,layer===1?'front':'back')(61,66),text:layer===1?'正面针迹':'背面针迹',on:active(3)||active(4)||st.done},{at:shift([46.7,34,20.3],'tools'),text:'丝线',on:active(2)}];
  return shade+byDepth(parts)+((ex>.02||xr>.02)?xrCallouts(cues,[2,56,8,85,4,82]):'');
 }
 function xiuRun(st,u,n){
  if(st.busy){u.flash('针线正在移动，请稍候');return;}if(st.step!==n-1){u.flash(st.step>=n?'此工序已完成':'先完成「'+xiuNames[st.step]+'」');return;}
- st.busy=true;st.phase=n;st.t=0;const e=++st.epoch;
+ st.manualPractice=null;st.busy=true;st.phase=n;st.t=0;const e=++st.epoch;
  u.animate(dt=>{if(e!==st.epoch)return false;st.t=Math.min(1,st.t+dt/[0,1.05,1.3,2.15,1.2][n]);st.progress=(n-1+st.t)/4;
  if(st.t<1)return true;st.busy=false;st.phase=0;st.step=n;st.done=n===4;if(st.done)u.flash('芙蓉绣成，转到背面看看');return false;});
 }
@@ -216,4 +263,4 @@ const ui=mountFigure({fig:'02',turn:'full',title:'蜀绣 · 双面芙蓉绣架',
  buttons:[...xiuNames.map((label,i)=>({label,onClick:(s,u)=>xiuRun(s,u,i+1)})),{label:'重新刺绣',onClick:xiuReset}],
  stats:s=>[{label:'刺绣工序',value:s.step+' / 4',small:true}],params(s,q){const n=Math.floor(Math.max(0,Math.min(4,Number(q.get('step'))||0)));s.step=n;s.progress=n/4;s.done=n===4;s.explode=Math.min(1,Math.max(0,Number(q.get('explode'))||0));}});
 window.heritageUI=ui;window.heritageId='xiu';xrMount(()=>ui,()=> '');
-</script><script src="../assets/figure-bridge.js"></script></body></html>
+</script><script src="../assets/figure-bridge.js?rev=studio3"></script></body></html>

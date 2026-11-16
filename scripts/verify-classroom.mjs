@@ -9,6 +9,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { checkCamera } from './check-camera.mjs';
+import { checkPractice } from './check-practice.mjs';
 const root=fileURLToPath(new URL('../dist/',import.meta.url));
 const artifacts=fileURLToPath(new URL('../qa/',import.meta.url));
 const require=createRequire(import.meta.url);
@@ -21,7 +22,7 @@ const server=createServer(async(req,res)=>{
     if(!route.startsWith(prefix))throw Error();
     const f=path.resolve(root,route.slice(prefix.length)||'index.html');
     if(!f.startsWith(path.resolve(root)+path.sep)||!(await stat(f)).isFile())throw Error();
-    res.setHeader('content-type',({'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.txt':'text/plain; charset=utf-8'})[path.extname(f)]||'application/octet-stream');
+    res.setHeader('content-type',({'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.webp':'image/webp','.svg':'image/svg+xml','.txt':'text/plain; charset=utf-8'})[path.extname(f)]||'application/octet-stream');
     res.end(await readFile(f));
   }catch{res.writeHead(404);res.end();}
 });
@@ -84,6 +85,10 @@ try{
   await page.goto(base+'#cabinet');await page.locator('dialog[open]').waitFor();
   assert(await page.evaluate(()=>{const d=document.querySelector('dialog[open]');return d.getBoundingClientRect().right<=innerWidth+1&&d.scrollWidth<=d.clientWidth+1;}),'Mobile exhibit overflows');
   await checkCamera(page);
+  assert.deepEqual(errors,[]);
+  const practicePage=await context.newPage();
+  practicePage.on('pageerror',error=>errors.push(String(error)));
+  await checkPractice(practicePage,base);
   assert.deepEqual(errors,[]);
   console.log('Passed desktop/mobile, workshop selection, six four-step makes, quizzes, previous notes, persistence, cabinet, classroom, view controls and exports.');
 }finally{try{await browser?.close();}finally{server.closeAllConnections?.();await new Promise(resolve=>server.close(resolve));}}

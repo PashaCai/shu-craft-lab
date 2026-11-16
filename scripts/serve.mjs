@@ -6,7 +6,7 @@ const root = path.resolve(fileURLToPath(new URL('../dist/',import.meta.url)));
 const option = process.argv.indexOf('--base-path');
 const basePath = option < 0 ? '/' : process.argv[option+1];
 if (!basePath || !/^\/(?:[A-Za-z0-9_-]+\/)*$/.test(basePath)) throw Error('Use a base path such as /shu-craft-lab/');
-const mime = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.json':'application/json; charset=utf-8','.png':'image/png','.txt':'text/plain; charset=utf-8'};
+const mime = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.json':'application/json; charset=utf-8','.png':'image/png','.webp':'image/webp','.txt':'text/plain; charset=utf-8'};
 const server = http.createServer((req,res)=>{
   let file;
   try {

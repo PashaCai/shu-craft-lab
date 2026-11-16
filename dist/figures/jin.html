@@ -10,7 +10,7 @@
    two treadles, swinging reed, warp, shuttle race, boat/wound bobbin, cloth and fringe. */
 const jinWood={l:'#cf9b69',m:'#a96c48',d:'#77513d'},jinHoney={l:'#f4ce92',m:'#d69c62',d:'#8c623e'},jinBrass=matOf('#d7a854');
 const jinNames=['张紧经线','提综开口','投梭引纬','打纬成锦'];
-const jinFresh=()=>({progress:0,step:0,done:false,busy:false,phase:0,t:0,epoch:0});
+const jinFresh=()=>({progress:0,step:0,done:false,busy:false,phase:0,t:0,epoch:0,manualPractice:null});
 const jinAmt=(st,n)=>st.step>=n?1:st.phase===n?st.t:0;
 const jinVec=(a,b)=>a.map((v,i)=>v+b[i]);
 const jinBounds=(p,r=0)=>[0,1].map(h=>[0,1,2].map(i=>(h?Math.max:Math.min)(...p.map(q=>q[i]))+(h?r:-r)));
@@ -42,11 +42,27 @@ function jinScene(st,m){
  let svg=box(...a,...b,mat,tone,1.65);if(x1-x0>18 && vis([0,0,1])) {
  for(const v of [.27,.69]){const pts=[.07,.25,.48,.68,.89].map((u,i)=>at([x0+(x1-x0)*u,y0+(y1-y0)*v+(.25*Math.sin(i*1.6)),z1+.04],k));svg+=jinPath(pts,mat.d,.58);}}
  add([a,b],svg,op);};
- const tension=jinAmt(st,1), opened=jinAmt(st,2),passed=jinAmt(st,3),woven=jinAmt(st,4);
+ const h=st.manualPractice,manual=!st.busy&&!st.done&&h&&h.stage===st.step&&[0,1].includes(h.operation)&&Number.isFinite(h.ratio);
+ const stage=manual?h.stage:-1,op=manual?h.operation:-1,r=manual?Math.min(1,Math.max(0,h.ratio)):0;
+ let tension=jinAmt(st,1), opened=jinAmt(st,2),passed=jinAmt(st,3),woven=jinAmt(st,4);
  const cycles=st.phase===4?st.t*3:0, fract=cycles%1;
- const maskOpen=st.phase===4?Math.max(0,Math.sin(fract*Math.PI)):st.done?0:opened;
- const shed=maskOpen*8, reedX=61+(st.phase===4?(17-8.5*woven)*Math.pow(Math.sin(fract*Math.PI),4):0);
- const boatY= st.phase===4?32+20*Math.cos(cycles*Math.PI):st.done?12:12+40*passed;
+ let maskOpen=st.phase===4?Math.max(0,Math.sin(fract*Math.PI)):st.done?0:opened;
+ let reedX=61+(st.phase===4?(17-8.5*woven)*Math.pow(Math.sin(fract*Math.PI),4):0);
+ let boatY=st.phase===4?32+20*Math.cos(cycles*Math.PI):st.done?12:12+40*passed,swapped=0;
+ if(stage===0)tension=op===0?.28*r:.28+.72*r;
+ if(stage===1)maskOpen=op===0?.2*r:.2+.8*r;
+ if(stage===2){
+   if(op===0){passed=r;boatY=12+40*r;}
+   else{
+     // Pack the outgoing pick, then exchange the raised and lowered shaft before return.
+     swapped=Math.min(1,r/.22);reedX+=16*Math.sin(Math.min(1,r/.18)*Math.PI);
+     passed=1;boatY=52-40*Math.max(0,(r-.22)/.78);
+   }
+ }
+ if(stage===3){boatY=12;swapped=1;woven=op===0?.32*r:.32+.68*r;
+   reedX+=op===0?14*r:14*(1-r);maskOpen=op===0?1-.76*r:.24*(1-r);}
+ const shed=maskOpen*8,liftFor=j=>((j?-.26:1)*(1-swapped)+(j?1:-.26)*swapped)*shed;
+ const active=n=>st.phase===n||stage===n-1;
  const alpha=1-.69*xr;
  const shadow=castShadow([[8,1,0],[11,63,0],[90,62,0],[110,60,7],[110,4,5],[89,2,0],[27,6,83],[37,59,80]]);
  // Main timber chassis, short mortised legs and a narrow front seat.
@@ -71,8 +87,9 @@ function jinScene(st,m){
  for(const y of [7,57]){for(const x of [100,110])bx([x-1.2,y-1,0],[x+1.2,y+1,18],jinWood,'base',alpha);}
  plank(96,3.8,18,113,60.4,20.8,lacquer,'base',alpha);
  for(const y of [24,40]){
-   rr([28,y,10.2],[76,y,8.5-(maskOpen*(y===24?3.4:0))],1.2,jinWood);
-   bx([64,y-2,6.2-(maskOpen*(y===24?3.4:0))],[76,y+2,9.1-(maskOpen*(y===24?3.4:0))],m);
+   const pedal=maskOpen*3.4*(y===24?1-swapped:swapped);
+   rr([28,y,10.2],[76,y,8.5-pedal],1.2,jinWood);
+   bx([64,y-2,6.2-pedal],[76,y+2,9.1-pedal],m);
    thread([[43,y,10],[45,y,27+maskOpen*2],[45,y,36+maskOpen*2]],'base','#5e5041',1.1);
  }
  // Roller ends and bobbins support the continuous warp and woven cloth.
@@ -84,16 +101,17 @@ function jinScene(st,m){
  }
  // Two representative shafts, their leashes and lifting cords.
  for(let j=0;j<2;j++){
-   const x=41+j*5,lift=(j?-.26:1)*shed;
+   const x=41+j*5,lift=liftFor(j);
    for(const z of [37+lift,55+lift])rr([x,9,z],[x,55,z],.83,j?jinHoney:m,'harness');
    for(const y of [10,54]){thread([[39,y,83],[x,y,55+lift]],'harness','#80543b',1.28);thread([[x,y,55+lift],[x,y,37+lift]],'harness','#795d4a',1.2);}
    for(let i=j;i<18;i+=2){const y=12+i*2.35,z=46+lift;
       thread([[x,y,55+lift],[x,y,z+2],[x,y-.5,z+.2],[x,y,z-1.2],[x,y+.5,z+.2],[x,y,z+2]],'harness','#9a624a',.95);
       thread([[x,y,z-1.2],[x,y,37+lift]],'harness','#9a624a',.81);}
  }
- for(let i=0;i<18;i++){const y=12+i*2.35, z=46+(i%2?-.26:1)*shed;const col=['#c89649','#bf5347','#d4a754','#307975','#a44b50','#dbc691'][i%6];
-  const wp=[[10,y,47],[24,y,44+2*tension],[41+(i%2)*5,y,z],[78-8.5*woven,y,46.9],[87,y,47]];
+ for(let i=0;i<18;i++){const y=12+i*2.35, z=46+liftFor(i%2);const col=['#c89649','#bf5347','#d4a754','#307975','#a44b50','#dbc691'][i%6];
+  const wp=[[10,y,47],[24,y,44+2*tension-(stage===0?3.5*(1-tension):0)],[41+(i%2)*5,y,z],[78-8.5*woven,y,46.9],[87,y,47]];
   for(let n=0;n<wp.length-1;n++)thread(wp.slice(n,n+2),'warp',col,2.05);
+  if(stage===0&&op===0&&i===9&&r>0){const pos=r*3,idx=Math.min(2,Math.floor(pos)),a=wp[idx],b=wp[idx+1];thread([...wp.slice(0,idx+1),a.map((v,n)=>v+(b[n]-v)*(pos-idx))],'warp','#fff2b0',3.1);}
  }
  // Suspended swinging reed, with a visible comb between its rails.
  for(const y of [8.8,55.2]){
@@ -121,13 +139,18 @@ function jinScene(st,m){
  let body=loft(a,b,n=>tone(n,jinHoney))+shape(b,jinHoney.l,.9)+hullInk([...a,...b],1.5);
  body+=shape([boat(-1,-3.3,1),boat(.95,-3.1,1),boat(.95,3,1),boat(-1,3.2,1)],'#513e34',.62);
  add([...a,...b],body);rr([sx,boatY-2.75,sz+1.08],[sx,boatY+2.8,sz+1.08],.79,matOf('#b94b40'),'boat');
- if(passed>0||st.phase===4){const pickX=st.phase===4?Math.max(sx,reedX+.55):sx;thread([[pickX,11,sz],[pickX,boatY,sz],[sx,boatY,sz]],'warp','#b64a40',2.3);}
- let tips=[{at:at([10,13,46],'rear'),text:'经轴',on:st.phase===1},{at:at([41,12,55+shed],'harness'),text:'提综',on:st.phase===2},{at:boat(0,0,1),text:'梭子',on:st.phase===3},{at:at([reedX,50,51.5],'reed'),text:'筘',on:st.phase===4},{at:apron(apronLen*.45,25),text:'锦面',on:st.done}];
+ if(stage===2&&op===1||stage===3){
+   const pack=stage===3?1:Math.min(1,r/.09),edge=78-8.5*woven;
+   thread([[sx+(edge-sx)*pack,12,sz],[sx+(edge-sx)*pack,52,sz]],'warp','#ae4e46',2.3);
+   const x=stage===3?(op===1?edge:Math.min(edge,Math.max(sx,reedX+.55))):sx;
+   thread([[edge,52,sz],[x,52,sz],[x,boatY,sz]],'warp','#c95649',2.4);
+ }else if(passed>0||st.phase===4){const pickX=st.phase===4?Math.max(sx,reedX+.55):sx;thread([[pickX,11,sz],[pickX,boatY,sz],[sx,boatY,sz]],'warp','#b64a40',2.3);}
+ let tips=[{at:at([10,13,46],'rear'),text:'经轴',on:active(1)},{at:at([41,12,55+liftFor(0)],'harness'),text:'提综',on:active(2)},{at:boat(0,0,1),text:'梭子',on:active(3)},{at:at([reedX,50,51.5],'reed'),text:'筘',on:active(4)},{at:apron(apronLen*.45,25),text:'锦面',on:st.done||stage===3}];
  return shadow+byDepth(parts)+((ex>.02||xr>.02)?xrCallouts(tips,[1,99,3,60,0,89]):'');
 }
 function jinRun(st,u,n){
  if(st.busy){u.flash('这一道工序正在进行');return;}if(st.step!==n-1){u.flash(st.step>=n?'此工序已完成':'先完成「'+jinNames[st.step]+'」');return;}
- st.busy=true;st.phase=n;st.t=0;const e=++st.epoch;
+ st.manualPractice=null;st.busy=true;st.phase=n;st.t=0;const e=++st.epoch;
  u.animate(dt=>{if(e!==st.epoch)return false;st.t=Math.min(1,st.t+dt/[0,1.15,1.2,1.2,2.15][n]);st.progress=(n-1+st.t)/4;
  if(st.t<1)return true;st.busy=false;st.phase=0;st.step=n;st.done=n===4;if(st.done)u.flash('菱纹蜀锦织成了');return false;});
 }
@@ -136,4 +159,4 @@ const ui=mountFigure({fig:'01',turn:'full',title:'蜀锦织造 · 花楼织机�
  state:{...jinFresh(),explode:0,xr:0},scene:jinScene,buttons:[...jinNames.map((label,i)=>({label,onClick:(s,u)=>jinRun(s,u,i+1)})),{label:'重新织造',onClick:jinReset}],
  stats:s=>[{label:'织造工序',value:s.step+' / 4',small:true}],params(s,q){const n=Math.floor(Math.max(0,Math.min(4,Number(q.get('step'))||0)));s.step=n;s.progress=n/4;s.done=n===4;s.explode=Math.min(1,Math.max(0,Number(q.get('explode'))||0));}});
 window.heritageUI=ui;window.heritageId='jin';xrMount(()=>ui,()=> '');
-</script><script src="../assets/figure-bridge.js"></script></body></html>
+</script><script src="../assets/figure-bridge.js?rev=studio3"></script></body></html>

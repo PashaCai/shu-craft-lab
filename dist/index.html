@@ -4,40 +4,62 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="在六间四川非遗工坊里旋转模型、观察结构、亲手制作，把自己的作品放进数字展柜。">
-  <meta name="theme-color" content="#f7f8fa">
+  <meta name="theme-color" content="#fafafc">
   <title>蜀作 · 四川非遗互动工坊</title>
   <link rel="icon" type="image/svg+xml" href="assets/mark.svg">
-  <link rel="stylesheet" href="assets/site.css">
-  <link rel="stylesheet" href="assets/cabinet.css">
-  <script defer src="assets/content.js"></script>
-  <script defer src="assets/cabinet-vision.js"></script>
-  <script defer src="assets/cabinet.js"></script>
-  <script defer src="assets/app.js"></script>
+  <link rel="stylesheet" href="assets/site.css?rev=studio3">
+  <link rel="stylesheet" href="assets/cabinet.css?rev=studio3">
+  <script defer src="assets/content.js?rev=studio3"></script>
+  <script defer src="assets/cabinet-vision.js?rev=studio3"></script>
+  <script defer src="assets/cabinet.js?rev=studio3"></script>
+  <link rel="stylesheet" href="assets/showroom.css?rev=studio3">
+  <script defer src="assets/practice-textiles.js?rev=studio3"></script>
+  <script defer src="assets/practice-folk.js?rev=studio3"></script>
+  <script defer src="assets/practice-finishes.js?rev=studio3"></script>
+  <script defer src="assets/practice.js?rev=studio3"></script>
+  <script defer src="assets/app.js?rev=studio3"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">跳到当前工坊</a>
   <header class="masthead">
     <div class="header-inner">
-      <a class="brand" href="#jin" aria-label="蜀作首页"><img src="assets/mark.svg" alt="" width="34" height="34"><span>蜀作</span></a>
+      <a class="brand" href="#lacquer" id="brand-home" aria-label="返回蜀作首页"><img src="assets/mark.svg" alt="" width="34" height="34"><span>蜀作</span></a>
       <span class="brand-detail">四川非遗互动工坊</span>
       <nav class="top-nav" aria-label="主导航">
-        <button class="nav-link active" data-open="workshop">工坊漫游</button>
+        <button class="nav-link active" data-open="workshop">工坊目录</button>
         <button class="nav-link" data-open="notebook">学习手记<span id="notebook-count">0</span></button>
-        <button class="nav-link" data-open="about">关于工坊</button>
+        <button class="nav-link" data-cabinet="open">漆器展柜</button>
       </nav>
       <button class="classroom-button" id="classroom" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 17v3m-4 0h8"/></svg><span>课堂演示</span></button>
     </div>
   </header>
+  <section class="feature" id="feature" data-craft="lacquer" aria-labelledby="feature-name">
+    <div class="feature-inner">
+      <div class="feature-copy">
+        <p class="feature-origin" id="feature-origin">四川成都 · 漆器髹饰</p>
+        <h1 id="feature-name">成都漆艺</h1>
+        <p class="feature-description" id="feature-description">在木胎上层层髹漆，亲手磨出一只朱漆碗的光泽。</p>
+        <div class="feature-actions">
+          <button class="primary-action" id="enter-studio">开始体验<span aria-hidden="true">↗</span></button>
+          <button class="quiet-action" id="hero-inspect">拆解成品<span aria-hidden="true">›</span></button>
+        </div>
+      </div>
+      <figure class="feature-visual">
+        <iframe id="feature-model" title="可拖动旋转的成品模型"></iframe>
+        <figcaption><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 10c2-4 13-5 15 0s-9 7-14 4m1-3-3 3 3 3"/></svg><span>左右拖动，旋转漆碗</span></figcaption>
+      </figure>
+    </div>
+  </section>
   <div class="workspace">
-    <aside class="catalog" aria-label="选择工坊">
-      <div class="catalog-heading"><h2>探索工坊</h2><button class="help-button" data-open="help"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 .2c0 1.9-2.5 2.1-2.5 4.1m0 2.8h.01"/></svg>操作指南</button></div>
+    <aside id="catalog" tabindex="-1" class="catalog" aria-label="选择工坊">
+      <div class="catalog-heading"><h2>探索六门手艺</h2><button class="help-button" data-open="help"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 .2c0 1.9-2.5 2.1-2.5 4.1m0 2.8h.01"/></svg>操作指南</button></div>
       <nav id="craft-nav" aria-label="非遗工坊"></nav>
     </aside>
     <main id="main" tabindex="-1">
       <section class="workshop-heading" aria-labelledby="craft-title">
         <div class="heading-copy">
           <div class="workshop-kicker"><span id="fig-number">工坊 01</span><span aria-hidden="true">/</span><span id="craft-category">传统技艺 · 丝织</span><span aria-hidden="true">/</span><span id="craft-location">四川 · 成都</span></div>
-          <h1 id="craft-title">一经一纬，织出锦城。</h1>
+          <h2 id="craft-title">一经一纬，织出锦城。</h2>
           <p id="craft-subtitle">把丝线交给织机，让花纹从经纬之间慢慢长出来。</p>
         </div>
         <div class="exhibit-actions" role="group" aria-label="展柜与实物采集">
@@ -59,6 +81,10 @@
             <div class="stage-dock"><span class="stage-corner"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 10a9 9 0 0 1 15-3m0-4v4h-4M19 14a9 9 0 0 1-15 3m0 4v-4h4"/></svg>拖动旋转<span> · 滚轮缩放</span></span><div class="zoom-tools" role="group" aria-label="缩放"><button id="zoom-out" aria-label="缩小">−</button><button id="zoom-reset" aria-label="重置缩放">100%</button><button id="zoom-in" aria-label="放大">+</button></div></div>
           </div>
           <div id="part-legend" class="part-legend" aria-label="部件名称"></div>
+          <section id="practice-lab" aria-labelledby="practice-title">
+            <div class="practice-heading"><h2 id="practice-title">亲手制作</h2><button class="utility-link" id="study-compare">对照工序 <span aria-hidden="true">↗</span></button></div>
+            <div id="practice-body"></div>
+          </section>
           <div class="bench-controls">
             <div class="bench-control wobble-control"><label for="wobble">手绘线条 <span id="wobble-value">2.4</span></label><input type="range" id="wobble" min="0" max="7" step="0.1" value="2.4" aria-label="手绘线条抖动程度"></div>
             <div class="bench-control"><span class="control-label">工坊配色</span><div class="swatches" id="palette-controls" role="group" aria-label="工坊配色"><button data-palette="mustard" style="--swatch:#f4b829" aria-label="姜黄" aria-pressed="true"></button><button data-palette="tomato" style="--swatch:#ed644d" aria-label="朱红" aria-pressed="false"></button><button data-palette="mint" style="--swatch:#a8d9bc" aria-label="竹青" aria-pressed="false"></button><button data-palette="cobalt" style="--swatch:#7194df" aria-label="靛蓝" aria-pressed="false"></button><button data-palette="blush" style="--swatch:#eaa6bb" aria-label="藕粉" aria-pressed="false"></button></div></div>
@@ -75,10 +101,11 @@
           </section>
         </section>
         <aside class="learning-panel" aria-label="学习与制作引导">
-          <div class="learning-heading"><h2>工艺课堂</h2><button id="craft-about" class="text-button">认识手艺 <span aria-hidden="true">↗</span></button></div>
+          <div class="learning-heading"><h2>工艺手册</h2><button id="craft-about" class="text-button">认识手艺 <span aria-hidden="true">↗</span></button></div>
           <div class="learning-tabs" role="tablist" aria-label="学习内容"><button role="tab" aria-selected="true" id="tab-make" aria-controls="make-panel">动手做</button><button role="tab" aria-selected="false" id="tab-learn" aria-controls="learn-panel">读懂它</button></div>
           <div id="make-panel" role="tabpanel" aria-labelledby="tab-make">
-            <div class="process-heading"><h3>制作<span id="product-name">蜀锦小样</span></h3><p>依次点击模型旁的工序按钮。</p></div>
+            <button id="study-parts" class="study-entry"><span><strong>拆解观察</strong><small id="study-question"></small></span><span aria-hidden="true">↗</span></button>
+            <div class="process-heading"><h3>制作<span id="product-name">蜀锦小样</span></h3><p>可在「亲手制作」中操作，也可用模型旁的按钮观看演示。</p></div>
             <ol id="process-list" class="process-list"></ol>
             <div class="making-progress"><div><span id="progress-label">还未动手</span><strong id="progress-number">0%</strong></div><div class="progress-track"><i id="making-fill"></i></div></div>
             <button class="collect-button" id="collect-work"><span>收进我的手记</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4Z"/></svg></button>
@@ -90,9 +117,10 @@
     </main>
     <footer class="page-footer">
       <div class="travel-progress"><div><span>我的手艺足迹</span><strong id="visited-count">0 / 6</strong></div><div class="progress-track"><i id="visited-fill"></i></div></div>
-      <div>手艺模型为课堂简化示意 <span aria-hidden="true">·</span> <a href="https://april-zhu.com/colorfigures" target="_blank" rel="noopener">Built with Colorfigures ↗</a></div>
+      <div><button data-open="about" class="footer-about">关于工坊</button> <span aria-hidden="true">·</span> 手艺模型为课堂简化示意 <span aria-hidden="true">·</span> <a href="https://april-zhu.com/colorfigures" target="_blank" rel="noopener">Built with Colorfigures ↗</a></div>
     </footer>
   </div>
+  <dialog id="study-dialog" aria-labelledby="study-dialog-title"><div class="study-bar"><h2 id="study-dialog-title">拆解观察</h2><button id="study-close" aria-label="关闭">×</button></div><div id="study-content"></div></dialog>
   <dialog id="info-dialog" aria-labelledby="dialog-kicker"><div class="dialog-top"><span id="dialog-kicker">蜀作 · 非遗互动工坊</span><button id="close-dialog" aria-label="关闭弹窗">×</button></div><div id="dialog-content"></div></dialog>
   <div class="app-toast" id="app-toast" role="status" aria-live="polite"></div>
 </body>

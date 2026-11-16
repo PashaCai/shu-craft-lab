@@ -75,7 +75,7 @@
     const z=g.base+g.height*t-4.4*bulge+g.flare*u*u*bulge*.57+lift;
     return polar(angle,r,z,u*width);
   }
-  function renderPetal(layer,angle,amount,offset,lift,palette,paint,opacity){
+  function renderPetal(layer,angle,amount,offset,lift,palette,paint,opacity,branches,light){
     const end=Math.max(.012,amount), surface=(t,u)=>petalPoint(layer,angle,t,u,offset,lift);
     const curve=(u,t0=0,t1=end)=>span(10,s=>surface(t0+(t1-t0)*s,u));
     const selvedge=[...curve(-1),...curve(1).reverse()], silhouette=[...selvedge,...curve(0)];
@@ -93,6 +93,13 @@
       strips.push(item(pts,face(pd(pts),color),surface(end*.52,u)));
     }
     s+=byDepth(strips)+ink(pd(selvedge),1.55);
+    // Light from the central cup reaches the roots most strongly and spreads
+    // upward along the fabric. The patch fits exactly inside the curved silk.
+    if(light>.002&&layer!==2){
+      const stop=end*(.24+.47*light);
+      const patch=[...span(12,t=>surface(stop*t,-.66*Math.sin(Math.PI*t))),...span(12,t=>surface(stop*t,.66*Math.sin(Math.PI*t))).reverse()];
+      s+='<g opacity="'+(.37*light).toFixed(3)+'">'+fill(pd(patch),'#ffe1a1')+'</g>';
+    }
     if(paint>.016){
       const endPaint=end*Math.max(.016,paint), inkCol=layer===2?'#406e55':mix(palette.d,'#9a463b',.31);
       const shaft=span(13,t=>surface(.045*endPaint+.9*t*endPaint,0));
@@ -101,24 +108,31 @@
         // Three pairs of fine, tapering brush marks share the sweep of the main vein.
         for(const side of [-1,1]){
           for(const [start,stop,target] of [[.12,.63,.74],[.25,.78,.66],[.46,.89,.52]]){
-            if(endPaint<=start)continue;
-            const finish=Math.min(endPaint,stop), length=finish-start;
+            if(branches<=0)continue;
+            const finish=Math.min(end, start+(stop-start)*branches), length=finish-start;
+            if(length<=0)continue;
             const branch=span(9,j=>{const t=start+j*length, v=(t-start)/(stop-start);return surface(t, side*target*(1-(1-v)**1.8));});
             s+=stroke(branch,mix(inkCol,palette.l,.36),.59);
           }
-          const seam=span(14,k=>{const t=.065*endPaint+.90*k*endPaint;return surface(t,side*.91);});
-          s+=stroke(seam,'#ffd897',.85);
+          if(branches>0){
+            const seam=span(14,k=>{const t=.065*end+.90*k*end*branches;return surface(t,side*.91);});
+            s+=stroke(seam,'#ffd897',.85);
+          }
         }
       }
     }
     return item(silhouette,'<g opacity="'+f(opacity)+'">'+s+'</g>',surface(end*.60,0));
   }
-  function petalFrame(layer,angle,amount,offset,lift){
+  function petalFrame(layer,angle,amount,offset,lift,ties){
     const surface=(t,u)=>petalPoint(layer,angle,t*amount,u,offset,lift);
     const paths=[-1,0,1].map(u=>span(12,k=>surface(k,u)));
     let s=paths.map((p,i)=>piping(p,i===1?'#cc9352':cane,i===1?1.07:1.4)).join('');
     for(const t of [.36,.65]) if(amount>t){
       const brace=span(6,u=>surface(t/amount,2*u-1)); s+=piping(brace,'#c99d64',.65);
+      if(ties>0)for(const u of [-.96,0,.96]){
+        const turns=span(10,k=>surface((t+.010*Math.sin(k*Math.PI*4*ties))/amount,u+.055*(k-.5)*ties));
+        s+=stroke(turns,'#8a5b40',.85);
+      }
     }
     return item(paths.flat(),s,surface(.58,0));
   }
@@ -179,7 +193,7 @@
     }
     return led;
   }
-  function supplies(parts,pal,frame,cloth,paint,exam){
+  function supplies(parts,pal,frame,cloth,paint,exam,brushTarget){
     const bottom=deck+.18;
     // Rolls of coloured silk on small wooden cores beside the cut piece.
     const roll=(x,y0,y1,r,material)=>{
@@ -195,10 +209,13 @@
     roll(83.2,13.2,28.6,2.55-.30*cloth,pal);
     roll(89.3,16.4,30.6,2.1,jade);
     // A bamboo-handled lining brush with a brass ferrule; spare splints are tied in a bundle.
-    const brushA=[80.5,35.0,bottom+1], brushB=[81.1,49,bottom+.9], brTip=[81.55,55.4,bottom+.35];
+    const brTip=brushTarget||[81.55,55.4,bottom+.35];
+    const brushA=brushTarget?shift(brTip,[11.8,3.2,13.1]):[80.5,35.0,bottom+1];
+    const brushB=brushTarget?shift(brTip,[3.8,1,4.2]):[81.1,49,bottom+.9];
+    const ferrule=brushTarget?shift(brTip,[2.2,.65,2.45]):[81.27,51.3,bottom+.8];
     segment(parts,brushA,brushB,.75,redwood,.7,.92);
-    segment(parts,brushB,[81.27,51.3,bottom+.8],1,gold,.7);
-    segment(parts,[81.27,51.3,bottom+.8],brTip,1.05,paint>.1?redwood:DARK,.7,.12);
+    segment(parts,brushB,ferrule,1,gold,.7);
+    segment(parts,ferrule,brTip,1.05,paint>.1?redwood:DARK,.7,.12);
     const number=frame>.96&&!exam?3:5;
     for(let i=0;i<number;i++){
       const a=[86.3+i*.91,37-i*.2,bottom+.48],b=[85.7+i*1.08,56+(i%3),bottom+.48];
@@ -219,8 +236,13 @@
     return cable[3];
   }
   function draw(st,selected){
-    const preview=st.preview, amount=preview?4:st.progress*4;
-    const frame=lim(amount),cloth=lim(amount-1),paint=lim(amount-2),light=preview?.78:lim(amount-3);
+    const m=st.manualPractice;
+    const manual=m&&!st.done&&!st.busy&&m.stage===st.step?m:null;
+    const ratio=manual?lim(Number(manual.ratio)||0):0;
+    const fraction=manual?lim(Number(manual.fraction??((manual.operation+ratio)/2))||0):0;
+    const preview=st.preview&&!manual, amount=manual?st.step+fraction:preview?4:st.progress*4;
+    const frame=lim(amount),cloth=lim(amount-1),paint=lim(amount-2);
+    const light=manual?.stage===3?(manual.operation===0?ratio:.65):preview?.78:lim(amount-3);
     const exploded=ease(lim(st.explode||0)),xray=ease(lim(st.xr||0));
     const silk={l:mix(selected.l,'#fff1d7',.14+.18*light),m:mix(selected.m,'#ffd4aa',.09+.13*light),d:mix(selected.d,selected.m,.44+.10*light)};
     const inner={l:mix(silk.l,'#fff4d6',.36),m:mix(silk.m,'#ffe8bf',.26),d:mix(silk.d,silk.m,.34)};
@@ -228,7 +250,15 @@
     const top=boardTop(0,0,96,78,deck,4.7);
     lampStand(stand);
     const cableAt=lampBattery(table,exploded,light);
-    supplies(table,silk,frame,cloth,paint,preview);
+    let brushTarget;
+    if(manual?.stage===2){
+      // The first petal faces the viewer at the front position. Its ink and the
+      // brush tip are projected from the same bent silk, including in exploded view.
+      const t=manual.operation===0?.045+.9*ratio:.12+.51*ratio;
+      const u=manual.operation===0?0:.74*(1-(1-ratio)**1.8);
+      brushTarget=petalPoint(0,tiers[0].angle,t,u,14*exploded,20*exploded);
+    }
+    supplies(table,silk,frame,cloth,paint,preview,brushTarget);
     const ledAt=globe(lampCore,exploded,frame,light,cloth,xray);
     parts.push(assembly(lampCore));
     if(frame>.01){
@@ -243,14 +273,17 @@
       const g=tiers[layer],m=layer===2?jade:layer===1?inner:silk;
       for(let i=0;i<g.count;i++){
         const a=g.angle+i*tau/g.count,phase=(i/g.count)*.58+(layer===1?.13:0);
-        const rib=lim((frame-phase)/(.99-phase)), sheet=lim((cloth-phase)/(.99-phase)),decor=lim((paint-i/g.count*.45)/.54);
+        const rib=lim((frame-phase)/(.99-phase)), sheet=lim((cloth-phase)/(.99-phase));
+        const decor=manual?.stage===2?(manual.operation===0?ratio:1):lim((paint-i/g.count*.45)/.54);
+        const branches=manual?.stage===2?(manual.operation===1?ratio:0):decor;
         const wireR=exploded*(layer===2?0:2),wireLift=exploded*(layer===2?7:12),clothR=exploded*(layer===2?6:layer===1?12:14),clothLift=exploded*(layer===2?11:layer===1?27:20);
         if(rib>.014&&(sheet<.998||xray>.015||exploded>.015)){
-          const p=petalFrame(layer,a,rib,wireR,wireLift);parts.push(p);
+          const ties=manual?.stage===0?(manual.operation===1?ratio:0):lim((frame-.65)/.35);
+          const p=petalFrame(layer,a,rib,wireR,wireLift,ties);parts.push(p);
           if(layer===0&&i===0)sampleSkeleton=petalPoint(layer,a,rib*.72,0,wireR,wireLift);
         }
         if(sheet>.012){
-          parts.push(renderPetal(layer,a,sheet,clothR,clothLift,m,decor,1-.91*xray));
+          parts.push(renderPetal(layer,a,sheet,clothR,clothLift,m,decor,1-.91*xray,branches,light));
           if(layer===0&&i===4)sampleSilk=petalPoint(layer,a,sheet*.8,0,clothR,clothLift);
         }
         if(rib>.015&&layer===0)shadowPts.push(petalPoint(layer,a,rib,0,wireR,wireLift));
@@ -325,5 +358,5 @@
   }
 })();
 </script>
-<script src="../assets/figure-bridge.js"></script>
+<script src="../assets/figure-bridge.js?rev=studio3"></script>
 </body></html>

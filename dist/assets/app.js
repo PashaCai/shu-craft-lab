@@ -6,8 +6,21 @@
   const dialog = $('info-dialog');
   const lacquerColors = {tomato:'#A53A32',mustard:'#AA782F',mint:'#38796C',cobalt:'#345674',blush:'#9B5676'};
   const lacquerDesign = () => ({shape:$('lacquer-shape').value,color:$('lacquer-color').value,accent:'#E3B76E',pattern:$('lacquer-pattern').value});
-  const figureURL = craft => 'figures/'+craft.id+'.html'+(craft.id==='lacquer'?'?'+new URLSearchParams(lacquerDesign()):'');
-  let current = crafts.find(c=>c.id===location.hash.slice(1)) || crafts[0];
+  const figureURL = craft => 'figures/'+craft.id+'.html?'+new URLSearchParams({rev:'studio3',...(craft.id==='lacquer'?lacquerDesign():{})});
+  let current = crafts.find(c=>c.id===location.hash.slice(1)) || crafts.find(c=>c.id==='lacquer');
+  const heroCopy = {
+    lacquer:['四川成都 · 漆器髹饰','从木胎到朱漆碗，亲手髹涂，一层层磨出光泽。'],
+    jin:['四川成都 · 织造','提起经线，送梭穿过梭口。在花楼织机上织出一段蜀锦。'],
+    xiu:['四川成都 · 刺绣','在绣架上绷紧软缎，用深浅丝线绣出一朵芙蓉。'],
+    bamboo:['崇州道明 · 竹编','从一根竹篾开始，一挑一压，编出一只提篮。'],
+    print:['四川绵竹 · 木版年画','木版印出线条，画笔填上颜色。亲手完成一张花鸟年画。'],
+    lantern:['四川自贡 · 灯彩','沿竹骨裱上彩绸，画好花脉，点亮一盏莲花灯。']
+  };
+  function reveal(id,focus=false){
+    const element=$(id);
+    if(focus)element.focus({preventScroll:true});
+    element.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
+  }
   let currentState = {progress:0,step:0,done:false};
   let saved = {}, notes = '', toastTimer, loadTimer, ready = false, tab = 'make';
   try { const stored=JSON.parse(localStorage.getItem('shu-craft-notebook-v1')||'{}'); saved=stored.works||{}; notes=stored.notes||''; } catch { /* A private browser can still explore every workshop. */ }
@@ -29,10 +42,9 @@
   }
   const send = (command,value) => { if(!ready) return toast('工作台正在就位，请稍等片刻。');frame.contentWindow.postMessage({type:'heritage:command',command,value},location.origin); };
   function renderCatalog(){
-    $('craft-nav').innerHTML=crafts.map((c,i)=>`<a href="#${c.id}" class="craft-link" ${c.id===current.id?'aria-current="page"':''}><span class="craft-icon">${craftIcon(c)}</span><span><span class="craft-index">CRAFT 0${i+1}</span><strong>${c.name}</strong><span class="craft-place">${c.place}</span></span>${saved[c.id]?'<span class="craft-done" aria-label="已收藏">✓</span>':''}</a>`).join('');
+    $('craft-nav').innerHTML=crafts.map(c=>`<a href="#${c.id}" class="craft-link" ${c.id===current.id?'aria-current="page"':''}><img class="catalog-object" src="assets/objects/${c.id}.webp" alt="" width="120" height="75"><span><strong>${c.name}</strong><span class="craft-place">${c.place}</span></span>${saved[c.id]?'<span class="craft-done" aria-label="已收藏">✓</span>':''}</a>`).join('');
     const count=Object.keys(saved).filter(id=>crafts.some(c=>c.id===id)).length;
     $('notebook-count').textContent=count;$('visited-count').textContent=`${count} / ${crafts.length}`;$('visited-fill').style.width=`${count/crafts.length*100}%`;
-    if(innerWidth<=620){const selected=$('craft-nav').querySelector('[aria-current=page]');$('craft-nav').scrollLeft=selected.offsetLeft-$('craft-nav').clientWidth/2+selected.clientWidth/2;}
   }
   function setTab(value){tab=value;for(const which of ['make','learn']){const button=$(`tab-${which}`);button.setAttribute('aria-selected',which===value);button.tabIndex=which===value?0:-1;$(`${which}-panel`).hidden=which!==value;}}
   function renderProgress(){
@@ -65,6 +77,14 @@
   }
   function selectCraft(craft,initial=false){
     current=craft;ready=false;currentState={progress:0,step:0,done:false,palette:craft.palette,zoom:1};
+    const [origin,description]=heroCopy[craft.id];
+    $('feature').dataset.craft=craft.id;$('feature-origin').textContent=origin;
+    $('feature-name').textContent=craft.name;$('feature-description').textContent=description;
+    const heroParams=new URLSearchParams({showcase:'hero',step:4,yaw:42,pitch:craft.id==='lacquer'?19:31});
+    if(craft.id==='lacquer'){heroParams.set('exhibit','1');heroParams.set('color','#B5362C');heroParams.set('pattern','cloud');}
+    $('feature-model').title=craft.name+'成品，可拖动旋转';
+    document.querySelector('.feature-visual figcaption span').textContent='左右拖动，旋转'+(craft.id==='lacquer'?'漆碗':'成品');
+    $('feature-model').src='figures/'+craft.id+'.html?'+heroParams;
     const index=crafts.indexOf(craft);
     $('fig-number').textContent=`工坊 0${index+1}`;$('craft-category').textContent=craft.category;$('craft-location').textContent=`四川 · ${craft.place}`;
     $('craft-title').textContent=craft.title;$('craft-subtitle').textContent=craft.subtitle;$('product-name').textContent=craft.product;
@@ -74,6 +94,7 @@
     renderCatalog();renderQuiz();renderProgress();setTab(tab);
     $('lacquer-options').hidden=craft.id!=='lacquer';
     frame.src=figureURL(craft);
+    window.ShuPractice.select(craft,()=>craft.id==='lacquer'?lacquerDesign():{});
     clearTimeout(loadTimer);loadTimer=setTimeout(()=>{if(!ready){$('loading').querySelector('span:last-child').textContent='场景尚未加载，点这里重新打开工作台';$('loading').style.cursor='pointer';}},12000);
   }
   function openDialog(title,html){$('dialog-kicker').textContent=title;$('dialog-content').innerHTML=html;if(!dialog.open)dialog.showModal();}
@@ -98,7 +119,8 @@
       ready=true;if(current.id==='lacquer')frame.contentWindow.postMessage({type:'heritage:lacquer-design',...lacquerDesign()},location.origin);clearTimeout(loadTimer);$('loading').hidden=true;frame.classList.add('ready');$('loading').style.cursor='';
       frame.contentWindow.postMessage({type:'heritage:command',command:'wobble',value:$('wobble').value},location.origin);
     }
-    if(message.type==='heritage:state'){currentState=message;renderProgress();}
+    if(message.type==='heritage:state'){currentState=message;renderProgress();window.ShuPractice.update(message);}
+    if(message.type==='heritage:ready')window.ShuPractice.mounted();
     if(message.type==='heritage:capture'){
       if(message.purpose==='save'&&saved[message.id]){storeArtwork(message.id,message.svg);delete saved[message.id].artwork;persist();}
       else{download(`蜀作-${current.name}-我的作品.svg`,message.svg,'image/svg+xml;charset=utf-8');toast('作品已导出为可缩放的 SVG 插画。');}
@@ -132,8 +154,15 @@
   $('tab-make').onclick=()=>setTab('make');$('tab-learn').onclick=()=>setTab('learn');
   for(const key of ['make','learn'])$('tab-'+key).onkeydown=e=>{const next={ArrowLeft:key==='make'?'learn':'make',ArrowRight:key==='make'?'learn':'make',Home:'make',End:'learn'}[e.key];if(next){e.preventDefault();setTab(next);$('tab-'+next).focus();}};
   $('craft-about').onclick=openCraftAbout;
-  $('classroom').onclick=()=>{const active=document.body.classList.toggle('classroom');$('classroom').setAttribute('aria-pressed',active);$('classroom').querySelector('span').textContent=active?'退出课堂':'课堂演示';};
-  document.querySelectorAll('[data-open]').forEach(button=>button.onclick=()=>{const key=button.dataset.open;if(key==='about')openAbout();if(key==='help')openHelp();if(key==='notebook')openNotebook();if(key==='workshop'){dialog.close();$('main').scrollIntoView({behavior:'smooth'});}});
+  $('classroom').onclick=()=>{const active=document.body.classList.toggle('classroom');$('classroom').setAttribute('aria-pressed',active);$('classroom').querySelector('span').textContent=active?'退出课堂':'课堂演示';if(active)reveal('main');};
+  document.querySelectorAll('[data-open]').forEach(button=>button.onclick=()=>{const key=button.dataset.open;if(key==='about')openAbout();if(key==='help')openHelp();if(key==='notebook')openNotebook();if(key==='workshop'){if(document.body.classList.contains('classroom'))$('classroom').click();reveal('catalog',true);}});
+  $('brand-home').onclick=()=>{if(document.body.classList.contains('classroom'))$('classroom').click();reveal('feature');};
+  $('enter-studio').onclick=()=>reveal('main',true);
+  $('hero-inspect').onclick=()=>window.ShuPractice.openParts();
+  $('craft-nav').addEventListener('click',event=>{const link=event.target.closest('a');if(link&&!event.ctrlKey&&!event.metaKey&&!event.shiftKey)requestAnimationFrame(()=>reveal('main',true));});
+  const wideLab=matchMedia('(min-width: 901px)');
+  const placeLab=()=>{const anchor=wideLab.matches?document.querySelector('.learning-heading'):document.querySelector('.bench-controls');anchor.before($('practice-lab'));};
+  wideLab.addEventListener('change',placeLab);placeLab();
   $('close-dialog').onclick=()=>dialog.close();dialog.addEventListener('click',event=>{if(event.target===dialog){const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)dialog.close();}});
   $('collect-work').onclick=()=>{
     if(!currentState.done){setTab('make');return toast('先按顺序完成四道工序，再收藏这件作品。');}

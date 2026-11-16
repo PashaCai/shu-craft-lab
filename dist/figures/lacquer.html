@@ -2,7 +2,7 @@
 <script src="../assets/core.js"></script>
 <script>
 /*
- 成都漆艺（国家非遗名录 Ⅷ-56）：https://www.ihchina.cn/project_details/14364.html
+ 成都漆艺（国家非遗名录 Ⅷ-56）：https://www.ihchina.cn/Article/Index/detail?id=14364
  木胎示范的四幕：修整木胎 → 刮底灰、磨平 → 逐遍髹漆阴干 → 饰纹、推光。
  这是概括工序的教学示意；剖视与分解为辨认材料而夸大各道涂层的厚度。
  场景部件：器足、实木胎壁与内底、底灰、内外漆面、口沿、饰纹、盒盖和钮；
@@ -30,7 +30,7 @@ function laSet(st,values){
  }
 }
 function laParams(st,q){laSet(st,Object.fromEntries(q));st.exhibit=q.get('exhibit')==='1';st.explode=laClamp(+q.get('explode')||0);
- if(q.has('step')||st.exhibit){st.step=st.exhibit?4:Math.max(0,Math.min(4,parseInt(q.get('step'))||0));st.done=st.step===4;st.progress=st.step/4;st.demo=false;}}
+ if(q.has('step')||st.exhibit){st.step=q.has('step')?Math.max(0,Math.min(4,parseInt(q.get('step'))||0)):4;st.done=st.step===4;st.progress=st.step/4;st.demo=false;}}
 const laPath=(pts,col,w,extra='')=>'<path d="'+pd(pts,false)+'" fill="none" stroke="'+col+'" stroke-width="'+w+'" stroke-linecap="round" stroke-linejoin="round" '+extra+'/>';
 const laDisc=(x,y,z,r,n=40)=>on(PZ(z),ellUV(x,y,r,r,n));
 function laPart(items,lo,hi,svg){items.push({box:[lo,hi],at:avg([lo,hi]),svg});}
@@ -38,7 +38,7 @@ function laPigment(x,y,mat,pigment){
  const a=laDisc(x,y,3.05,3.1),b=laDisc(x,y,5.6,4.1),c=laDisc(x,y,5.48,3.38);
  return loft(a,b,n=>toneI(n,mat))+hullInk(a.concat(b),1.8)+shape(b,mat.l,.9)+shape(c,pigment,.8)+laPath(laDisc(x,y,5.49,2.45).slice(1,9),'#dfbc95',.65);
 }
-function laTools(st,stage,x,y){
+function laTools(st,x,y,model,manual){
  const items=[],top=boardTop(0,0,100,80,3,5);
  let paper=castShadow(top)+board(0,0,100,80,3,5,{l:'#dfc397',m:'#b68b61',d:'#886749'});
  for(let j=0;j<8;j++){const yy=6+j*9.7;paper+=laPath([[6,yy,3.03],[12,yy-.3,3.03],[20,yy+.2,3.03],[25,yy,3.03]],'#bd9a71',.52)+laPath([[78,yy+1,3.03],[85,yy+.6,3.03],[94,yy+1,3.03]],'#bd9a71',.52);}
@@ -53,10 +53,33 @@ function laTools(st,stage,x,y){
   const z=3.15+i*.35,pts=[[79+i*.3,57,z],[90.2,58+i*.15,z],[91.5-i*.5,68,z],[79,67-i*.2,z]];
   cloth+=shape(pts,i===2?'#ebdcc4':'#cbb99d',.85);
   if(i===2){for(let k=0;k<2;k++)cloth+=laPath([[80.6+k*.62,57.5,z+.02],[80.5+k*.65,67,z+.02]],'#9d6a58',.57);cloth+=laPath([[84,66.9,z+.03],[87,62.3,z+.03],[90,59.7,z+.03]],'#bea990',.55);}
- }laPart(items,[78.8,57,3],[91.5,68,4],cloth);
+ }
+ const polishing=manual?.stage===3&&manual.operation===1;
+ const sanding=manual?.stage===1&&manual.operation===1;
+ const scraping=manual?.stage===1&&manual.operation===0;
+ const motion=manual?laClamp(Number(manual.ratio)||0):0;
+ if(!polishing)laPart(items,[78.8,57,3],[91.5,68,4],cloth);
+ if(polishing||sanding||scraping){
+  // The tool face follows both the radius and the slope of the selected profile.
+  const phi=scraping?1.59-motion*laTau:1.11+.34*Math.cos(motion*laTau*(sanding?1.5:2));
+  const level=scraping?.48:sanding?.61-.16*motion:.5+.12*Math.sin(motion*laTau*2);
+  const layer=polishing?2:1;
+  const contact=(angle,height,offset)=>{
+   const p=model.at(angle,height,layer,false);
+   return [p[0]+Math.cos(angle)*offset,p[1]+Math.sin(angle)*offset,p[2]];
+  };
+  const w=scraping?.19:.15,half=scraping?.055:.10;
+  const corners=d=>[contact(phi-w,level-half,d),contact(phi+w,level-half,d),contact(phi+w,level+half,d),contact(phi-w,level+half,d)];
+  const rear=corners(.1),front=corners(scraping?.55:1.1);
+  const stroke=polishing?'#e8d8ba':sanding?'#969990':'#cbab7f';
+  let tool=loft(rear,front,()=>polishing?'#b7a58b':'#84755e')+shape(front,stroke,.85);
+  if(polishing)tool+=laPath([contact(phi-w*.6,level-half,.99),contact(phi-w*.55,level+half,1.2)],'#986d60',.8);
+  if(scraping){const a=contact(phi,level,1),b=contact(phi,level,8);b[2]+=3.6;tool+=rod(a,b,.85,light,toneI,.75,1.05);front.push(b);}
+  const ps=rear.concat(front);laPart(items,...[Math.min,Math.max].map(fn=>[0,1,2].map(i=>fn(...ps.map(p=>p[i])))),tool);
+ }
 
  // The board primitive sits at z=0, so use an actual elevated, rectangular whetstone.
- laPart(items,[79,46,3],[90,51.2,4.8],box(79,46,3,90,51.2,4.8,laMat('#898c82'))+laPath([[80,47,4.85],[86,48.5,4.85],[88,48.2,4.85]],'#aaa99b',.6));
+ if(!sanding)laPart(items,[79,46,3],[90,51.2,4.8],box(79,46,3,90,51.2,4.8,laMat('#898c82'))+laPath([[80,47,4.85],[86,48.5,4.85],[88,48.2,4.85]],'#aaa99b',.6));
  // Bamboo brush: rectangular bristle fan and ferrule fixed to the end of a tapered handle.
  const brush=(b,dx,dy,dz)=>{
   const at=t=>[b[0]+dx*t,b[1]+dy*t,b[2]+dz*t],u=norm([-dy,dx,0]),fan=(t,v)=>at(t).map((k,i)=>k+v*u[i]);
@@ -65,12 +88,13 @@ function laTools(st,stage,x,y){
   for(let i=-2;i<=2;i++)s+=laPath([fan(.70,i*.48),fan(.99,i*.91)],'#624634',.52);return s;
  };
  let a=[40,71.5,3.9],dx=20,dy=-2,dz=0;
- if(st.running&&st.step===2){const phi=.5+st.motion*laTau*1.25,rad=laShapes[st.shape].r*.78;
-  let dest=[x+Math.cos(phi)*rad,y+Math.sin(phi)*rad,7.5+laShapes[st.shape].h*.57];
+ if(st.running&&st.step===2||manual?.stage===2&&manual.operation===0){
+  const phi=manual?1.59-motion*laTau:.5+st.motion*laTau*1.25;
+  const dest=model.at(phi,.57);
   a=[dest[0]+13,dest[1]+5,dest[2]+8];dx=-13;dy=-5;dz=-8;}
  laPart(items,[Math.min(a[0],a[0]+dx)-2,Math.min(a[1],a[1]+dy)-2,Math.min(a[2],a[2]+dz)-.7],[Math.max(a[0],a[0]+dx)+2,Math.max(a[1],a[1]+dy)+2,Math.max(a[2],a[2]+dz)+.7],brush(a,dx,dy,dz));
  const blade=[[32,66.8,3.4],[41,65.7,3.4],[41.5,68.9,3.4],[31.8,68.2,3.4]];
- laPart(items,[21,65.5,3],[42,69,4.4],rod([23,68.3,3.9],[33,67.6,3.9],.68,light,toneI,.7,1)+shape(blade,'#9d7957',.84));
+ if(!scraping)laPart(items,[21,65.5,3],[42,69,4.4],rod([23,68.3,3.9],[33,67.6,3.9],.68,light,toneI,.7,1)+shape(blade,'#9d7957',.84));
  return {paper,items,top};
 }
 const laMod=(a,n)=>((a%n)+n)%n;
@@ -95,12 +119,18 @@ function laOrnament(kind){
  return lines;
 }
 const laMotifs=Object.fromEntries(['cloud','rings','petals'].map(k=>[k,laOrnament(k)]));
-function laVessel(st,x,y,base,v){
+function laVessel(st,x,y,base,v,manual){
  const shapeDef=laShapes[st.shape],profile=st.profile||shapeDef.p,ex=ease(laClamp(st.explode||0)),xr=ease(laClamp(st.xr||0));
- const h=shapeDef.h*(st.demo||st.exhibit?1:.60+.40*laClamp(v)),R=shapeDef.r;
+ const h=shapeDef.h*(.60+.40*laClamp(v)),R=shapeDef.r;
  const radius=t=>{const u=laClamp(t)*11,i=Math.min(10,Math.floor(u));return Math.max(1.25,R*laLerp(profile[i],profile[i+1],u-i));};
  const design=st.color||laPals[st.pal]||laPals.tomato,ac=st.accent||'#E5BE70',paint=laMat(design,.22),innerPaint=laMat(mix(design,'#29121a',.29),.12);
- const coat=laClamp(v-2),ground=laClamp(v-1),decor=laClamp(v-3),faceList=[],floorPieces=[],decorCells=new Map();
+ const amount=manual?laClamp(Number(manual.ratio)||0):0;
+ const coat=manual?.stage===2?(manual.operation===0?amount:1):laClamp(v-2);
+ const ground=manual?.stage===1?(manual.operation===0?amount:1):laClamp(v-1);
+ const decor=manual?.stage===3?(manual.operation===0?amount:1):laClamp(v-3);
+ const wet=manual?.stage===2?(manual.operation===0?amount:1-amount):0;
+ const polished=manual?.stage===3?(manual.operation===1?amount:manual.operation>1?1:0):laClamp((v-3.45)/.55);
+ const faceList=[],floorPieces=[],decorCells=new Map();
  const maskCenter=.62,rel=a=>Math.abs(laMod(a-maskCenter+Math.PI,laTau)-Math.PI);
  // The removed coating samples are only the front sector. The rest of the vessel stays put.
  function band(a){
@@ -116,10 +146,30 @@ function laVessel(st,x,y,base,v){
   const d=moved?displacement(l):[0,0,0],floor=inner?(st.shape==='plate'?1.2:2.3)*(1-t):0;
   return [x+rad*Math.cos(a)+d[0],y+rad*Math.sin(a)+d[1],base+t*h+floor+d[2]];
  }
- function painted(a){const g=laMod(a+.63,laTau)/laTau;return coat>=.999||g<coat?2:ground>=.999||g<ground?1:0;}
+ function painted(a){
+  const g=manual&&(manual.stage===1||manual.stage===2)?laMod(1.59-a,laTau)/laTau:laMod(a+.63,laTau)/laTau;
+  return coat>=.999||g<coat?2:ground>=.999||g<ground?1:0;
+ }
  function material(type,inner){return type===2?inner?innerPaint:paint:type===1?laGrey:laWood;}
  function push(points,svg,order=0){if(svg)faceList.push({d:depthOf(avg(points))+order,svg});}
  const decoColor=mix(ac,'#f9edc6',.08);
+ // A broad, low-contrast reflection on the ground finish narrows as it is polished.
+ // Clip the strip to the current material tile on either side of the vessel wall.
+ function reflection(a,b,u,w,l,inside,moved,col){
+  if(l!==2||w<=.21||u>=.88)return '';
+  const bottom=Math.max(u,.21),top=Math.min(w,.88),mid=(a+b)/2;
+  function interval(t){
+   const along=(t-.21)/.67;
+   const width=(.14+.035*wet-.08*polished)*Math.pow(Math.max(0,Math.sin(Math.PI*along)),.75);
+   const axis=YAW*Math.PI/180+(inside?Math.PI+.46:-.49)+.33*(t-.48)*(t+.2);
+   const center=mid+laMod(axis-mid+Math.PI,laTau)-Math.PI;
+   return [Math.max(a,Math.min(b,center-width)),Math.max(a,Math.min(b,center+width))];
+  }
+  const low=interval(bottom),high=interval(top);
+  if(low[0]===low[1]&&high[0]===high[1])return '';
+  const glint=[pt(low[0],bottom,l,inside,moved),pt(low[1],bottom,l,inside,moved),pt(high[1],top,l,inside,moved),pt(high[0],top,l,inside,moved)];
+  return '<path d="'+pd(glint)+'" fill="'+mix(col,'#ffcfaa',.08+.22*wet+.38*polished)+'" stroke="none"/>';
+ }
  // Split every decorative path along the angular and vertical grid edges before projection.
  if(decor>.001){for(const [pts,width] of laMotifs[st.pattern]){
   for(let i=1;i<pts.length;i++){
@@ -148,6 +198,7 @@ function laVessel(st,x,y,base,v){
    const ps=[pt(a,u,l,false,m),pt(b,u,l,false,m),pt(b,w,l,false,m),pt(a,w,l,false,m)];
    if(vis(n)){
     const col=toneI(n,material(l,false));let art=face(pd(ps),col);
+    art+=reflection(a,b,u,w,l,false,m,col);
     const pvis=alpha=>vis(norm([Math.cos(alpha),Math.sin(alpha),-slope]));
     if(!pvis(am-laW))art+=line([ps[0],ps[3]],2.25);
     if(!pvis(am+laW))art+=line([ps[1],ps[2]],2.25);
@@ -160,7 +211,8 @@ function laVessel(st,x,y,base,v){
      const f1=u+(.35+.17*Math.sin(a*3+.49*j))/11,f2=u+(.35+.17*Math.sin(b*3+.49*j))/11;
      art+=laPath([pt(a,f1,l,false,m),pt(b,f2,l,false,m)],'#936c48',.88);
     }else if(l===1&&j%3===1&&i%2===0){
-     art+=laPath([pt(a+.02,u+.034,l,false,m),pt(a+.08,u+.038,l,false,m)],'#b9b1a3',.64);}
+     const sanding=manual?.stage===1&&manual.operation===1?1-amount:manual?.stage===1?1:.25;
+     art+=laPath([pt(a+.02,u+.034,l,false,m),pt(a+.08,u+.038,l,false,m)],mix(col,'#d4caba',.20+.6*sanding),.55+.42*sanding);}
     push(ps,art);
    }
    if(m&&!vis(n)){const back=ps.map(p=>[p[0]-.43*Math.cos(am),p[1]-.43*Math.sin(am),p[2]]);push(back,face(pd(back),toneI(n.map(k=>-k),l===2?laMat(mix(design,'#735a46',.53)):laGrey)));}
@@ -178,7 +230,7 @@ function laVessel(st,x,y,base,v){
   if(B<0)continue;
   for(let j=0;j<11;j++){const u=j/11,w=(j+1)/11,slope=(radius(w)-radius(u))/(h/11),n=norm([-Math.cos(am),-Math.sin(am),slope]);
    if(!vis(n))continue;const l=type,ps=[pt(a,u,l,true),pt(b,u,l,true),pt(b,w,l,true),pt(a,w,l,true)];
-   let art=face(pd(ps),toneI(n,material(l,true)));
+   const col=toneI(n,material(l,true));let art=face(pd(ps),col)+reflection(a,b,u,w,l,true,false,col);
    if(j===9&&decor>.50)art+=laPath([pt(a,.895,l,true),pt(b,.895,l,true)],mix(ac,design,.45),.75);
    push(ps,art);}
   const pf=[pt(a,0,type,true),pt(b,0,type,true),[x,y,base+(st.shape==='plate'?1.2:2.3)]];
@@ -193,7 +245,16 @@ function laVessel(st,x,y,base,v){
  push([[x,y,base+(st.shape==='plate'?1.2:2.3)]],floorPieces.join(''),.02);
  let lidHeight=0;
  if(st.shape==='box'&&v>0.06){const z=base+h+(.40+ex*10+xr*4),rr=radius(1)*1.015;lidHeight=z-base-h+3.4;
-  let cover=cyl(x,y,z,z+2.15,rr,material(v>=3?2:v>=2?1:0,false),toneI,1.6,48);
+  const lidLayer=coat>=.99?2:ground>=.99?1:0,lidMat=material(lidLayer,false);
+  let cover=cyl(x,y,z,z+2.15,rr,lidMat,toneI,1.6,48);
+  if(lidLayer===2){
+   const axis=YAW*Math.PI/180+.5;
+   const strip=Array.from({length:13},(_,i)=>{
+    const t=i/12,offset=rr*(.12+.67*t),side=rr*(.37-.20*t*t);
+    return [x+offset*Math.cos(axis)-side*Math.sin(axis),y+offset*Math.sin(axis)+side*Math.cos(axis),z+2.17];
+   });
+   cover+=laPath(strip,mix(lidMat.l,'#fff1cf',.13+.30*wet+.58*polished),2.9-.99*polished);
+  }
   if(decor>.1){for(const r of [.86,.91]){const q=laDisc(x,y,z+2.17,rr*r);cover+=laPath(q.concat([q[0]]),ac,1.05);}
    for(let i=0;i<8;i++){let loop=[];for(let j=0;j<=20;j++){const th=j*laTau/20,rad=rr*(.34+.25*Math.cos(th)),ang=i*laTau/8+.19*Math.sin(th);loop.push([x+rad*Math.cos(ang),y+rad*Math.sin(ang),z+2.18]);}
     cover+=laPath(loop,ac,1.12);}}
@@ -204,12 +265,16 @@ function laVessel(st,x,y,base,v){
 }
 function laScene(st,pal){
  const x=st.exhibit?37:49,y=st.exhibit?37:39,base=st.exhibit?5:9.2;
- const v=st.demo||st.exhibit?4:st.step+(st.running?ease(st.motion):0),model=laVessel(st,x,y,base,v);
+ const m=st.manualPractice,manual=m&&!st.running&&!st.done&&!st.exhibit&&m.stage===st.step?m:null;
+ const count=st.step===3?3:2;
+ const fraction=manual?laClamp(Number(manual.fraction??((manual.operation+manual.ratio)/count))||0):0;
+ const v=manual?st.step+fraction:st.demo?4:st.step+(st.running?ease(st.motion):0);
+ const model=laVessel(st,x,y,base,v,manual);
  const r=model.R,h=model.h,ex=model.ex,xr=model.xr;
  if(st.exhibit){
-  const z=base-1.7,sh=laDisc(x,y,z,r*.64,32);return '<g opacity=".16">'+castShadow(sh,0)+'</g>'+model.svg;
+  const z=base-1.7,sh=laDisc(x,y,z,r*.43,48);return '<g opacity=".12">'+castShadow(sh,z-.5)+'</g>'+model.svg;
  }
- const bench=laTools(st,v,x,y),vShadow=laDisc(x,y,base+h*.58,r*.88);
+ const bench=laTools(st,x,y,model,manual),vShadow=laDisc(x,y,base+h*.58,r*.88);
  let back=bench.paper+'<g opacity=".41">'+castShadow(vShadow,3,bench.top)+'</g>';
  laPart(bench.items,[x-r,y-r,base-1.7],[x+r+12*ex,y+r+9*ex,base+h+23*ex],model.svg);
  const tags=[{at:model.at(1.13,.50,0),text:'实木胎',on:st.running&&st.step===0},
@@ -235,4 +300,4 @@ const ui=mountFigure({fig:'06',title:'成都漆艺 · 髹饰器物',turn:'full',
  buttons:laSteps.map((label,i)=>({label,onClick:(st,u)=>laRun(i,st,u)})).concat({label:'重新制作',onClick:laReset}),scene:laScene,params:laParams,
  stats:st=>[{label:'完成工序',value:st.step+' / 4'}],readout:st=>st.demo?'样器陈列':st.done?'漆器已成':laSteps[st.step]});
 window.heritageUI=ui;window.heritageId='lacquer';xrMount(()=>ui,()=>'');
-</script><script src="../assets/lacquer-model.js"></script><script src="../assets/figure-bridge.js"></script></body></html>
+</script><script src="../assets/lacquer-model.js"></script><script src="../assets/figure-bridge.js?rev=studio3"></script></body></html>
