@@ -7,6 +7,8 @@
   const embedded = window.parent !== window;
   const id = window.heritageId;
   const initial = JSON.parse(JSON.stringify(ui.st));
+  const showcase = new URLSearchParams(location.search).get('showcase');
+  let resetNumber = 0, selectedPart = '';
   const style = document.createElement('style');
   style.textContent = `
     body,button,input{font-family:"Microsoft YaHei","PingFang SC",sans-serif}
@@ -18,6 +20,11 @@
     @media(max-width:560px){${embedded ? `.actions{position:absolute;top:17px;left:18px;right:85px;max-width:none;flex-direction:row;gap:6px}.act{font-size:10px;padding:5px 9px}.stats{position:absolute;top:18px;right:18px;gap:4px}.stat .k{font-size:8px}.stat .v{font-size:23px}.stat.small .v{font-size:13px}.chips{left:0;top:calc(100% + 7px);max-width:260px}.toast{max-width:220px;left:18px;font-size:10px}` : ''}}
   `;
   document.head.appendChild(style);
+  if (showcase && embedded) {
+    const displayStyle=document.createElement('style');
+    displayStyle.textContent='.actions,.stats,.toast{display:none!important}html,body,.stage,#fig{background:transparent!important}#fig{cursor:grab}#fig:active{cursor:grabbing}.tag.study-picked rect{fill:#ffe2a4!important;stroke:#73391f!important;stroke-width:2px}.tag{cursor:pointer}';
+    document.head.appendChild(displayStyle);
+  }
   document.documentElement.lang = 'zh-CN';
   document.querySelector('label[for=wb]')?.replaceChildren(document.createTextNode('手绘线条'));
   const translations = {vreset:'回到正面',vspin:'自动旋转',xrb:'透视内部',lblb:'部件标注'};
@@ -25,6 +32,13 @@
   let zoom = 1, explodeTarget = Math.round(ui.st.explode || 0), lastMessage = '', token = 0;
   const svg = document.getElementById('fig');
   const originalBox = svg.getAttribute('viewBox').split(/\s+/).map(Number);
+  if(showcase==='hero'){
+    const bounds=document.getElementById('art').getBBox();
+    if(bounds.width>0 && bounds.height>0){
+      const margin=id==='lacquer'?.11:.14;
+      originalBox.splice(0,4,bounds.x-bounds.width*margin,bounds.y-bounds.height*margin,bounds.width*(1+2*margin),bounds.height*(1+2*margin));
+    }
+  }
   window.LBL_U = () => innerWidth < 560 ? svg.viewBox.baseVal.width / Math.max(1,svg.getBoundingClientRect().width) : 0;
   const fit = () => {
     const [x,y,w,h] = originalBox;
@@ -32,14 +46,17 @@
     // The camera still rotates in true 3D; this only frames the finished SVG.
     const factor = (mobile ? 1.04 : 1.04) / zoom;
     const nw=w*factor, nh=h*factor;
-    svg.setAttribute('viewBox',`${x+(w-nw)/2} ${y+(h-nh)/2-(mobile?h*.06:0)} ${nw} ${nh}`);
+    svg.setAttribute('viewBox',`${x+(w-nw)/2} ${y+(h-nh)/2-(mobile&&!showcase?h*.06:0)} ${nw} ${nh}`);
   };
   fit();
   addEventListener('resize',()=>{fit();ui.render();});
   const report = (force=false) => {
     const st = ui.st;
+    if(selectedPart){for(const tag of svg.querySelectorAll('.tag[data-t]'))tag.classList.toggle('study-picked',tag.dataset.t===selectedPart);}
     const state = {type:'heritage:state',id,progress:Math.max(0,Math.min(1,Number(st.progress)||0)),step:Number(st.step)||0,done:!!st.done,xray:!!st.xrT,labels:!document.documentElement.classList.contains('nolabels'),exploded:explodeTarget===1,spinning:document.getElementById('vspin')?.getAttribute('aria-pressed')==='true',palette:st.pal,zoom};
     state.parts = state.labels ? [...document.querySelectorAll('#fig .tag[data-t]')].map(el=>({number:el.dataset.n,name:el.dataset.t})).filter((part,index,all)=>all.findIndex(other=>other.number===part.number)===index) : [];
+    state.busy=!!(st.busy||st.running||st.working);
+    state.practicereset=resetNumber;
     const serialized = JSON.stringify(state);
     if(force || serialized!==lastMessage){lastMessage=serialized;if(embedded)window.parent.postMessage(state,location.origin);}
     document.documentElement.dataset.progress = state.progress;
@@ -48,11 +65,41 @@
   };
   const nativeRender=ui.render;
   ui.render=()=>{nativeRender();report();};
+  document.getElementById('btns').addEventListener('click',event=>{
+    const button=event.target.closest('.act');if(!button)return;
+    delete ui.st.manualPractice;
+    if(button===[...document.querySelectorAll('#btns .act')].at(-1))resetNumber++;
+  },true);
+  window.heritagePose=()=>({yaw:YAW,pitch:PITCH});
+  if(showcase==='compare'){
+    const share=()=>requestAnimationFrame(()=>parent.postMessage({type:'heritage:pose',pose:window.heritagePose()},location.origin));
+    svg.addEventListener('pointermove',event=>{if(event.buttons)share();});
+    svg.addEventListener('pointerup',share);
+    addEventListener('keyup',event=>{if(event.key.startsWith('Arrow'))share();});
+  }
+  if(showcase==='parts')svg.addEventListener('pointerdown',event=>{
+    const name=event.target.closest('.tag')?.dataset.t;
+    if(name){event.stopImmediatePropagation();event.preventDefault();parent.postMessage({type:'heritage:part',name},location.origin);}
+  },true);
   function setZoom(value){zoom=Math.max(.7,Math.min(1.7,value));fit();report(true);}
   svg.addEventListener('wheel',event=>{event.preventDefault();setZoom(zoom+(event.deltaY<0?.1:-.1));},{passive:false});
   addEventListener('message',event=>{
     if(event.source!==parent||event.origin!==location.origin||event.data?.type!=='heritage:command') return;
     const {command,value}=event.data;
+    if(command==='practice-preview'){
+      if(value?.stage===ui.st.step && !ui.st.done && !ui.st.busy && !ui.st.running && !ui.st.working)ui.st.manualPractice=value;
+      ui.render();return;
+    }
+    if(command==='practice-commit'){
+      if(value===ui.st.step && !ui.st.done)document.querySelectorAll('#btns .act')[value]?.click();
+      ui.render();report(true);return;
+    }
+    if(command==='explode-at' && showcase==='parts'){
+      token++;ui.st.explode=Math.max(0,Math.min(1,Number(value)||0));explodeTarget=ui.st.explode>0?1:0;
+      document.documentElement.classList.remove('nolabels');ui.render();return;
+    }
+    if(command==='highlight-part' && showcase==='parts'){selectedPart=String(value);ui.render();return;}
+    if(command==='align-camera' && showcase==='compare' && Number.isFinite(value?.yaw) && Number.isFinite(value?.pitch)){setCam(value.yaw,value.pitch);ui.render();return;}
     if(command==='xray')document.getElementById('xrb')?.click();
     if(command==='labels'){
       document.getElementById('lblb')?.click();

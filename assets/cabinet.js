@@ -9,6 +9,7 @@
   }
   const samples=[format({id:'sample-bowl',name:'朱漆弦纹碗',shape:'bowl',color:'#9c3428',accent:'#e6bd71',pattern:'rings',source:'sample'}),format({id:'sample-vase',name:'墨漆云纹瓶',shape:'vase',color:'#303d39',accent:'#d5ab69',pattern:'cloud',source:'sample'})];
   let cached=[],dialog,opener,current,mode='',media,token=0,url='',reverseSpin=false,draft=null,originMode='';
+  let comparison=null;
   const list=()=>{try{const v=JSON.parse(localStorage.getItem(key)||'[]');if(Array.isArray(v))cached=v.filter(x=>x&&typeof x==='object'&&x.source!=='sample'&&x.id).map(format);}catch{}return cached;};
   const persist=v=>{try{localStorage.setItem(key,JSON.stringify(v));cached=v;return true;}catch{return false;}};
   function save(raw,source){
@@ -33,21 +34,82 @@
     if(dialog)return;dialog=document.createElement('dialog');dialog.className='lc-dialog';dialog.id='lacquer-cabinet';dialog.setAttribute('aria-labelledby','lc-title');
     dialog.innerHTML='<div class="lc-shell"><svg width="0" height="0" aria-hidden="true" class="lc-def"><defs><linearGradient id="cabGlaze"><stop stop-color="#000" stop-opacity=".28"/><stop offset=".25" stop-color="#fff" stop-opacity=".15"/><stop offset=".47" stop-color="#fff" stop-opacity=".03"/><stop offset="1" stop-color="#000" stop-opacity=".21"/></linearGradient></defs></svg><header class="lc-head"><div><small>蜀作 <i>/</i> 数字典藏</small><h2 id="lc-title">漆器展示柜</h2></div><button type="button" class="lc-close" data-do="close" aria-label="关闭展示柜">×</button></header><div class="lc-body"></div><div class="lc-status" role="status" aria-live="polite" data-status></div></div>';
     document.body.append(dialog);dialog.addEventListener('click',clicked);
-    dialog.addEventListener('change',e=>{if(e.target.matches('[data-photo]')){const file=e.target.files[0];e.target.value='';if(file)loadFile(file);}});
-    const cleanup=()=>{release();draft=null;mode='';$('.lc-body').replaceChildren();if(opener?.isConnected)opener.focus({preventScroll:true});};
+    dialog.addEventListener('change',e=>{
+      if(e.target.matches('[data-photo]')){const file=e.target.files[0];e.target.value='';if(file)loadFile(file);}
+      if(e.target.matches('[data-compare-select]'))changeComparedItem(Number(e.target.dataset.compareSelect),e.target.value);
+    });
+    const cleanup=()=>{release();draft=null;comparison=null;mode='';$('.lc-body').replaceChildren();if(opener?.isConnected)opener.focus({preventScroll:true});};
     dialog.addEventListener('close',()=>{if(!dialog.open)cleanup();});dialog.addEventListener('cancel',release);
     addEventListener('pagehide',()=>{release();if(dialog.open)dialog.close();});document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='camera'&&dialog.open&&(media||$('[data-do="start"]')?.disabled))camera('采集已暂停。回到课堂后，可重新开启摄像头。');});
     addEventListener('hashchange',()=>{if(dialog.open&&location.hash!=='#cabinet')dialog.close();});
-    addEventListener('message',e=>{const frame=$('.lc-model');if(!frame||e.source!==frame.contentWindow||e.origin!==location.origin||e.data?.type!=='heritage:state')return;reverseSpin=!!e.data.spinning;syncSpin();});
+    addEventListener('message',e=>{
+      if(!dialog.open||e.origin!==location.origin)return;
+      if(mode==='compare'){syncComparedPose(e);return;}
+      const frame=$('.lc-model');
+      if(!frame||e.source!==frame.contentWindow||e.data?.type!=='heritage:state')return;
+      reverseSpin=!!e.data.spinning;syncSpin();
+    });
   }
   function show(){ensure();if(!dialog.open){opener=document.activeElement;dialog.showModal();}}
-  function screen(m,title,body){release();mode=m;const heading=$('#lc-title');heading.textContent=title;heading.tabIndex=-1;$('.lc-body').innerHTML=body;setStatus('');dialog.scrollTop=0;heading.focus({preventScroll:true});}
+  function screen(m,title,body){release();comparison=null;mode=m;const heading=$('#lc-title');heading.textContent=title;heading.tabIndex=-1;$('.lc-body').innerHTML=body;setStatus('');dialog.scrollTop=0;heading.focus({preventScroll:true});}
   function syncSpin(){const b=$('[data-do="spin"]');if(b){b.setAttribute('aria-pressed',String(reverseSpin));b.textContent=reverseSpin?'暂停旋转':'自动旋转';}}
+  function modelParams(item,compare=false){
+    const q=new URLSearchParams({exhibit:'1'});
+    if(compare)q.set('showcase','compare');
+    for(const [key,value] of Object.entries({step:'4',shape:item.shape,color:item.color,accent:item.accent,pattern:item.pattern}))q.set(key,value);
+    if(item.profile)q.set('profile',item.profile.join(','));
+    return q;
+  }
   function gallery(id){
     show();draft=null;const mine=list(),all=[...mine,...samples],it=all.find(x=>x.id===(id||current))||all[0];current=it.id;reverseSpin=false;
-    const q=new URLSearchParams({shape:it.shape,color:it.color,accent:it.accent,pattern:it.pattern,step:'4',exhibit:'1'});if(it.profile)q.set('profile',it.profile.join(','));
     const card=x=>`<button type="button" data-do="select" data-id="${esc(x.id)}" aria-pressed="${x.id===it.id}" class="lc-card"><span class="lc-mini">${thumb(x)}</span><span><strong>${esc(x.name)}</strong><small>${notes[x.source]}</small></span></button>`;
-    screen('gallery','漆器展示柜',`<div class="lc-layout"><section class="lc-detail" aria-label="当前展品"><div class="lc-stage"><span class="lc-stage-label"><i></i> 三维展台</span><iframe class="lc-model" title="${esc(it.name)}：拖动旋转三维器物" src="./figures/lacquer.html?${esc(q.toString())}"></iframe><div class="lc-view-controls"><button data-do="spin" aria-pressed="false">自动旋转</button><button data-do="front">回到正面</button></div></div><div class="lc-caption"><div><small>${notes[it.source]}</small><h3>${esc(it.name)}</h3></div><div class="lc-pigments" aria-label="漆色与纹饰色"><i style="background:${it.color}" title="${it.color}"></i><i style="background:${it.accent}" title="${it.accent}"></i></div></div><p class="lc-meta">${shapes[it.shape]}<b>·</b>${patterns[it.pattern]}<b>·</b>${it.source==='camera'?'依据照片轮廓近似重建':it.source==='sample'?'课堂参考标本':'数字工坊制作'}</p>${it.source==='sample'?'':`<div class="lc-manage"><button data-do="edit">编辑作品</button><button data-do="remove">移除作品</button></div><div class="lc-confirm" hidden><span>从本机移除这件作品？</span><button data-do="keep">保留</button><button data-do="confirm-remove">确认移除</button></div>`}</section><aside class="lc-library"><div class="lc-lib-head"><div><small>本机收藏</small><h3>我的作品 <em>${mine.length}</em></h3></div><button class="lc-primary lc-collect" data-do="camera">${icon('camera')} 采集实物</button></div>${mine.length?`<div class="lc-list">${mine.map(card).join('')}</div>`:'<div class="lc-empty"><strong>为第一件漆器留个位置</strong><p>将工坊成品收入柜中，或拍摄身边的器物，生成可旋转的数字作品。</p></div>'}<div class="lc-samples"><h4>工艺标本 <em>02</em></h4><div class="lc-list">${samples.map(card).join('')}</div></div></aside></div>`);
+    screen('gallery','漆器展示柜',`<div class="lc-layout"><section class="lc-detail" aria-label="当前展品"><div class="lc-stage"><span class="lc-stage-label"><i></i> 三维展台</span><iframe class="lc-model" title="${esc(it.name)}：拖动旋转三维器物" src="./figures/lacquer.html?${esc(modelParams(it).toString())}"></iframe><div class="lc-view-controls"><button data-do="spin" aria-pressed="false">自动旋转</button><button data-do="front">回到正面</button><button data-do="compare">并排比较</button></div></div><div class="lc-caption"><div><small>${notes[it.source]}</small><h3>${esc(it.name)}</h3></div><div class="lc-pigments" aria-label="漆色与纹饰色"><i style="background:${it.color}" title="${it.color}"></i><i style="background:${it.accent}" title="${it.accent}"></i></div></div><p class="lc-meta">${shapes[it.shape]}<b>·</b>${patterns[it.pattern]}<b>·</b>${it.source==='camera'?'依据照片轮廓近似重建':it.source==='sample'?'课堂参考标本':'数字工坊制作'}</p>${it.source==='sample'?'':`<div class="lc-manage"><button data-do="edit">编辑作品</button><button data-do="remove">移除作品</button></div><div class="lc-confirm" hidden><span>从本机移除这件作品？</span><button data-do="keep">保留</button><button data-do="confirm-remove">确认移除</button></div>`}</section><aside class="lc-library"><div class="lc-lib-head"><div><small>本机收藏</small><h3>我的作品 <em>${mine.length}</em></h3></div><button class="lc-primary lc-collect" data-do="camera">${icon('camera')} 采集实物</button></div>${mine.length?`<div class="lc-list">${mine.map(card).join('')}</div>`:'<div class="lc-empty"><strong>为第一件漆器留个位置</strong><p>将工坊成品收入柜中，或拍摄身边的器物，生成可旋转的数字作品。</p></div>'}<div class="lc-samples"><h4>工艺标本 <em>02</em></h4><div class="lc-list">${samples.map(card).join('')}</div></div></aside></div>`);
+  }
+  function comparedObject(item){
+    return `<div class="lc-stage"><iframe class="lc-model" title="${esc(item.name)}，可拖动旋转并同步另一侧视角" src="./figures/lacquer.html?${esc(modelParams(item,true).toString())}"></iframe></div>
+      <div class="lc-compare-caption"><div><strong>${shapes[item.shape]} · ${patterns[item.pattern]}</strong><small>${notes[item.source]}</small></div>
+      <div class="lc-pigments" aria-label="漆色 ${item.color}，纹饰色 ${item.accent}"><i style="background:${item.color}"></i><i style="background:${item.accent}"></i></div></div>`;
+  }
+  function compare(){
+    const mine=list(),all=[...mine,...samples],first=all.find(item=>item.id===current)||all[0];
+    const pair=[first,all.find(item=>item.id!==first.id)];
+    function choices(items,selected){
+      return items.map(item=>`<option value="${esc(item.id)}"${item.id===selected?' selected':''}>${esc(item.name)}</option>`).join('');
+    }
+    const panes=pair.map((item,index)=>`<section class="lc-compare-pane" aria-labelledby="lc-side-${index}"><label for="lc-pick-${index}" id="lc-side-${index}">${index===0?'左':'右'}侧作品</label>
+      <select id="lc-pick-${index}" data-compare-select="${index}">${mine.length?`<optgroup label="我的作品">${choices(mine,item.id)}</optgroup>`:''}<optgroup label="工艺标本">${choices(samples,item.id)}</optgroup></select>
+      <div data-compare-object="${index}">${comparedObject(item)}</div></section>`).join('');
+    screen('compare','并排比较',`<div class="lc-compare-tools"><button data-do="back" class="lc-secondary">返回展示柜</button><p>拖动任一件作品，两侧视角同步。</p></div><div class="lc-compare-grid">${panes}</div>`);
+    comparison={all,pair,pose:null};
+  }
+  function changeComparedItem(index,id){
+    if(!comparison||(index!==0&&index!==1))return;
+    const {all,pair}=comparison,item=all.find(candidate=>candidate.id===id),other=1-index;
+    if(!item||item.id===pair[index].id)return;
+    const swapped=item.id===pair[other].id;
+    if(swapped)pair[other]=pair[index];
+    pair[index]=item;
+    for(const slot of (swapped?[0,1]:[index])){
+      $(`[data-compare-select="${slot}"]`).value=pair[slot].id;
+      $(`[data-compare-object="${slot}"]`).innerHTML=comparedObject(pair[slot]);
+    }
+    setStatus(swapped?'两件作品已交换位置。':'');
+  }
+  function syncComparedPose(event){
+    if(!comparison||!['heritage:pose','heritage:ready'].includes(event.data?.type))return;
+    const frames=[...dialog.querySelectorAll('.lc-compare-pane iframe')];
+    const index=frames.findIndex(frame=>frame.contentWindow===event.source);
+    if(index<0)return;
+    const poseEvent=event.data.type==='heritage:pose';
+    if(poseEvent){
+      const pose=event.data.pose;
+      if(!Number.isFinite(pose?.yaw)||!Number.isFinite(pose?.pitch))return;
+      comparison.pose={yaw:pose.yaw,pitch:pose.pitch};
+    }
+    if(comparison.pose){
+      const target=frames[poseEvent?1-index:index];
+      target.contentWindow.postMessage({type:'heritage:command',command:'align-camera',value:comparison.pose},location.origin);
+    }
   }
   function camera(msg=''){
     show();draft=null;
@@ -97,7 +159,8 @@
     switch(b.dataset.do){
       case 'close':release();dialog.close();break;
       case 'select':gallery(b.dataset.id);$('.lc-card[aria-pressed="true"]')?.focus({preventScroll:true});break;
-      case 'back':gallery(current);break;
+      case 'compare':compare();break;
+      case 'back':{const wasCompare=mode==='compare';gallery(current);if(wasCompare)$('[data-do="compare"]').focus({preventScroll:true});break;}
       case 'spin':case 'front':$('.lc-model')?.contentWindow?.postMessage({type:'heritage:command',command:b.dataset.do},location.origin==='null'?'*':location.origin);break;
       case 'camera':case 'retake':camera();$('[data-do="start"]').focus({preventScroll:true});break;
       case 'start':startCamera();break;

@@ -15,15 +15,21 @@ function bmLine(pts,c,w){return '<path d="'+pd(pts,false)+'" fill="none" stroke=
 function bmWall(a,h,off=0,e=0){return [bmCX+(23+8*h+off)*Math.cos(a),bmCY+(18+8*h+off)*Math.sin(a),bmBH+1+22*h+e];}
 function bmFoot(x,y,z){return [bmCX+x,bmCY+y,z];}
 function bmScene(st,m){
- const ex=ease(bmClamp(st.explode||0)),xr=ease(bmClamp(st.xr||0)),v=st.demo?4:st.step+(st.running?ease(st.motion):0);
+ const manual=!st.running&&!st.done&&st.manualPractice?.stage===st.step?st.manualPractice:null;
+ const ratio=manual?bmClamp(Number(manual.ratio)||0):0,op=manual?.operation||0;
+ const fraction=manual?bmClamp(manual.fraction??(op+ratio)/2):0;
+ const v=manual?st.step+fraction:st.demo?4:st.step+(st.running?ease(st.motion):0);
+ const ex=ease(bmClamp(st.explode||0)),xr=ease(bmClamp(st.xr||0));
  const prep=bmClamp(v),floor=bmClamp(v-1),wall=bmClamp(v-2),rim=bmClamp(v-3),wallE=ex*14,rimE=ex*29;
+ const baseWork=manual&&st.step===1,wallWork=manual&&st.step===2,rimWork=manual&&st.step===3;
+ const active=!!manual||st.running;
  const out=[],tagset=[],boardPts=boardTop(0,0,100,82,bmBH,5);
  let back=castShadow(boardPts,bmBH-3.4)+board(0,0,100,82,bmBH,5,{l:'#e8c89a',m:'#c59b71',d:'#927151'});
  let grain='';for(let i=0;i<6;i++){const yy=6+i*13;grain+=bmLine([[4,yy,bmBH+.01],[18,yy+.25,bmBH+.01],[32,yy-.14,bmBH+.01]],'#c5a67c',.47);grain+=bmLine([[77,yy+.7,bmBH+.01],[84,yy-.1,bmBH+.01],[95,yy+.21,bmBH+.01]],'#c5a67c',.47);}
  back+=clipTo(boardPts,grain);
  const shadePts=Array.from({length:24},(_,i)=>bmWall(i*bmTau/24,wall,0));if(wall>.03||floor>.03)back+='<g opacity=".66">'+castShadow(shadePts,bmBH,boardPts)+'</g>';
  // Raw bamboo culms; visible hollow ends and nodes. Every length has its own bound and cap.
- for(let i=0;i<2;i++){let x=6+i*5.2,a=[x,30+i*3,5.7],b=[x,67-i*4,5.7],mat=i?bmGreen:matOf('#adba77');bmRod(out,a,b,2.35,mat);
+ for(let i=0;i<2;i++){let x=6+i*5.2+(manual&&st.step===0&&i===1?3.5*(op?1:ratio):0),a=[x,30+i*3,5.7],b=[x,67-i*4,5.7],mat=i?bmGreen:matOf('#adba77');bmRod(out,a,b,2.35,mat);
   for(let j=0;j<3;j++){let y=35+i*2+j*11.2;bmRod(out,[x,y,5.7],[x,y+.75,5.7],2.65,bmGreen);}
   const d=vis([0,1,0])?1:-1,cap=d>0?b:a;bmPut(out,[cap],shape(on(PY(cap[1]+d*.08),ellUV(x,cap[2],1.5,1.5,12)),'#5c5940',.7),.03);}
  // Three fan-shaped bundles of split splints; the maker borrows a length at each stage.
@@ -34,7 +40,8 @@ function bmScene(st,m){
  const toolA=[81,67,4.8],toolB=[88,54,4.8],toolC=[94,43,4.15];bmRod(out,toolA,toolB,1.65,bmBark,1.4);bmRod(out,toolB,toolC,.73,matOf('#aaa894'),.12);
  for(let t of [.64,.76,.86]){const p=toolA.map((v,k)=>bmMix(v,toolB[k],t)),q=p.map((v,k)=>v+(toolB[k]-toolA[k])*.035);bmRod(out,p,q,1.55,bmRed);}
  // The newly prepared strips remain on the bench until the base is interlaced.
- const loose=prep*(1-floor);if(loose>.02){for(let i=0;i<7;i++){const p=prep,bx=bmMix(14,30,p),by=bmMix(66,25+i*3.5,p),zz=bmBH+.18+i*.035;
+ const prepared=manual&&st.step===0?(op===1?ratio:0):prep;
+ const loose=prepared*(1-floor);if(loose>.02){for(let i=0;i<7;i++){const p=prepared,bx=bmMix(14,30,p),by=bmMix(66,25+i*3.5,p),zz=bmBH+.18+i*.035;
   const fpts=[[bx,by,zz],[bx+34,by+1.3,zz],[bx+34,by+3.2,zz],[bx,by+1.9,zz]];
   bmPut(out,fpts,'<g opacity="'+loose+'">'+shape(fpts,i%3===0?bmStraw.m:bmPale.l,.65)+'</g>');}}
  // Woven base. Each crossing alternates above and below rather than one whole set covering the other.
@@ -42,7 +49,10 @@ function bmScene(st,m){
  if(floor>.003){const z0=bmBH+.49,spacing=3.44,w=2.42;
   for(let axis=0;axis<2;axis++)for(let i=-6;i<=6;i++){
    const c=i*spacing,rx=23,ry=18.1,perp=axis===0?ry:rx,along=axis===0?rx:ry;
-   if(Math.abs(c)+w/2>perp)continue; const len=along*Math.sqrt(1-(c/perp)**2),part=bmClamp((floor*2-axis)*1.22+.18-(i+6)*.021);if(part<=.001)continue;
+   if(Math.abs(c)+w/2>perp)continue;
+   const len=along*Math.sqrt(1-(c/perp)**2),edge=Math.floor((perp-w/2)/spacing);
+   const part=baseWork?(axis<op?1:axis>op?0:bmClamp(ratio*(edge*2+1)-(i+edge))):bmClamp((floor*2-axis)*1.22+.18-(i+6)*.021);
+   if(part<=.001)continue;
    const start=-len,end=bmMix(start,len,part),ze=ex*(axis===0?0:6);
    function q(t,k,side){let wav=(axis===0?1:-1)*Math.cos(Math.PI*(t/spacing+i));let x=axis===0?t:c+side*w/2,y=axis===1?t:c+side*w/2;return bmFoot(x,y,z0+.18*wav+k+ze+.23);}
    for(let j=Math.floor(start/spacing-.5);j<=Math.ceil(end/spacing+.5);j++){
@@ -52,37 +62,44 @@ function bmScene(st,m){
     bmPut(out,pts,fill(pd(pts),color)+bmLine(pts.slice(0,3),'#785a39',.48)+bmLine(pts.slice(3),'#785a39',.48));
    }
   }
-  tagset.push({at:bmFoot(9,-5,z0),text:'底经',on:st.running&&st.step===1});
-  if(floor>.46)tagset.push({at:bmFoot(-9,5,z0+ex*6),text:'底纬',on:st.running&&st.step===1});
+  tagset.push({at:bmFoot(9,-5,z0),text:'底经',on:active&&st.step===1});
+  if(floor>.5)tagset.push({at:bmFoot(-9,5,z0+ex*6),text:'底纬',on:active&&st.step===1});
  }
  // Six weft rows wind around a flared oval; each angular cell owns its stake and weft,
  // reversing the visible order on the inside of the opposite wall. In x-ray the near facing rows turn translucent.
  const sector=bmTau/bmCount;
- for(let i=0;i<bmCount&&wall>.001;i++){
+ const stakeLift=wallWork&&op===0?ratio:1;
+ function stakePoint(angle,h){
+  const reach=wallWork?21*(1-stakeLift)*h:0,pt=bmWall(angle,h,reach,wallE);
+  if(wallWork)pt[2]-=22*h*(1-stakeLift);
+  return pt;
+ }
+ for(let i=0;i<bmCount&&(wall>.001||wallWork);i++){
   let a=i*sector;const near=vis([Math.cos(a),Math.sin(a),0]),n=[Math.cos(a),Math.sin(a),-.31];
-  for(let j=0;j<bmRows;j++){const h0=j/bmRows,h1=Math.min(wall,(j+1.02)/bmRows);if(h1<=h0)continue;
+  for(let j=0;j<bmRows;j++){const h0=j/bmRows,h1=Math.min(wallWork?1:wall,(j+1.02)/bmRows);if(h1<=h0)continue;
    const wc=(j+.5)/bmRows,lo=Math.max(h0,wc-.067),hi=Math.min(h1,wc+.067),isOuter=(i+j)%2===0;
-   const stakePts=[bmWall(a-.062,h0,0,wallE),bmWall(a+.062,h0,0,wallE),bmWall(a+.062,h1,0,wallE),bmWall(a-.062,h1,0,wallE)];
+   const stakePts=[stakePoint(a-.062,h0),stakePoint(a+.062,h0),stakePoint(a+.062,h1),stakePoint(a-.062,h1)];
    let stake=fill(pd(stakePts),toneI(near?n:n.map(v=>-v),bmPale))+bmLine([stakePts[0],stakePts[3]],'#725130',.73)+bmLine([stakePts[1],stakePts[2]],'#725130',.73);
-   const astr=[a-sector/2-.001,a,a+sector/2+.001],d=isOuter?.68:-.68;
+   const woven=wallWork?(op===1?bmClamp(ratio*bmRows*bmCount-j*bmCount-i):0):1;
+   const endAngle=a-sector/2+sector*woven,astr=[a-sector/2-.001,Math.min(a,endAngle),endAngle+.001],d=isOuter?.68:-.68;
    const l=astr.map((t,k)=>bmWall(t,lo,k===1?d:0,wallE)),h=astr.map((t,k)=>bmWall(t,hi,k===1?d:0,wallE)),pts=l.concat(h.slice().reverse());
    const pig=j===1||j===4?m:(i%5===0?bmStraw:bmPale),col=toneI(near?n:n.map(v=>-v),pig);
-   let strip=hi<=lo?'':fill(pd(pts),col)+bmLine(l,'#68492f',.71)+bmLine(h,'#68492f',.71);
+   let strip=hi<=lo||woven===0?'':fill(pd(pts),col)+bmLine(l,'#68492f',.71)+bmLine(h,'#68492f',.71);
    if(xr>.01&&near)strip='<g opacity="'+(1-.79*xr)+'">'+strip+'</g>';
-   bmPut(out,stakePts.concat(pts),(near===isOuter)?stake+strip:strip+stake);
+   bmPut(out,strip?stakePts.concat(pts):stakePts,(near===isOuter)?stake+strip:strip+stake);
   }
  }
- if(wall>.04)tagset.push({at:bmWall(1.68,wall*.67,0,wallE),text:'篮壁纬篾',on:st.running&&st.step===2});
+ if(wall>.04&&(!wallWork||op===1&&ratio>0))tagset.push({at:bmWall(.01,wallWork?Math.max(.08,.8*ratio):wall*.67,0,wallE),text:'篮壁纬篾',on:active&&st.step===2});
  // A paired rim strip clamps every loose end. Short, square-ended bindings show how it is locked.
- if(rim>.001){const spread=bmClamp(rim*2.12),hh=(1-spread)*4;
+ if(rim>.001){const spread=rimWork?(op===0?ratio:1):bmClamp(rim*2.12),hh=(1-spread)*4;
   for(let i=0;i<48*spread;i++){const a=i*bmTau/48,b=Math.min((i+1)*bmTau/48,spread*bmTau);
    const p=bmWall(a,1,.1,rimE+hh),q=bmWall(b,1,.1,rimE+hh);
    const a2=[p[0],p[1],p[2]-1.35],b2=[q[0],q[1],q[2]-1.35];bmRod(out,a2,b2,.95,bmBark);bmRod(out,p,q,1.36,bmStraw);
    if(i%4===0){const q1=bmWall(a-.013,1,.99,rimE+.73+hh),q2=bmWall(a+.013,1,.99,rimE-1.96+hh);bmRod(out,q1,q2,.52,m);}}
-  if(spread>.2)tagset.push({at:bmWall(.45,1,0,rimE+hh),text:'夹口圈',on:st.running&&st.step===3});
+  if(spread>.2)tagset.push({at:bmWall(.45,1,0,rimE+hh),text:'夹口圈',on:active&&st.step===3});
   // One laminated bamboo arch, joined to the rim at breadthwise opposite points.
   const alpha=-.72,ax=31*Math.cos(alpha),ay=26*Math.sin(alpha),z=bmBH+22.75+rimE+ex*4;
-  const amount=bmClamp((rim-.34)/.66),arch=t=>[bmCX+ax*Math.cos(t),bmCY+ay*Math.cos(t),z+36*Math.sin(t)];
+  const amount=rimWork?(op===1?ratio:0):bmClamp((rim-.34)/.66),arch=t=>[bmCX+ax*Math.cos(t),bmCY+ay*Math.cos(t),z+36*Math.sin(t)];
   if(amount>.001){const ap=[],nSeg=24;
    for(let k=0;k<nSeg*amount;k++){const t0=k*Math.PI/nSeg,t1=Math.min((k+1)*Math.PI/nSeg,Math.PI*amount),p=arch(t0),q=arch(t1);
     const tangent=norm(sub(q,p)),lat=norm([-ay,ax,0]),up=norm(cross(tangent,lat)),ring=(p)=>[[-1,-1],[1,-1],[1,1],[-1,1]].map(([u,v])=>p.map((a,k)=>a+lat[k]*1.45*u+up[k]*.65*v));
@@ -90,18 +107,18 @@ function bmScene(st,m){
     bmPut(out,A.concat(B),vv);ap.push(p);
     if((k>7&&k<16&&k%2===0)||k===1||k===22){const as=ring(arch(t0+.004)),bs=ring(arch(t1-.004));bmPut(out,as.concat(bs),loft(as,bs,n=>toneI(n,m))+bmLine(as.concat([as[0]]),'#785538',.76));}
    }
-   if(amount>.5)tagset.push({at:arch(Math.PI*.5),text:'竹提梁',on:st.running&&st.step===3});
+   if(amount>.5)tagset.push({at:arch(Math.PI*.5),text:'竹提梁',on:active&&st.step===3});
   }
  }
- if(!tagset.length)tagset.push({at:[11,45,6],text:'原料慈竹',on:st.running});
+ tagset.push({at:[11+(manual&&st.step===0?3.5*(op?1:ratio):0),45,6],text:'原料慈竹',on:active&&st.step===0});
  return back+byDepth(out)+(Math.max(ex,xr)>.38?xrCallouts(tagset,[19,80,15,66,bmBH,54+rimE]):'');
 }
 function bmRun(i,st,ui){if(st.running)return ui.flash('这一道正在进行');if(i!==st.step)return ui.flash(i<st.step?'这一道已经完成':'先完成「'+bmSteps[st.step]+'」');
  st.demo=false;st.running=true;st.motion=0;const gen=st.generation;ui.animate(dt=>{if(st.generation!==gen)return false;st.motion=Math.min(1,st.motion+dt/[1,1.45,1.8,1.55][i]);st.progress=(i+st.motion)/4;if(st.motion<1)return true;st.step=i+1;st.done=st.step===4;st.running=false;st.motion=0;return false;});}
-function bmReset(st,ui){st.generation++;Object.assign(st,{step:0,progress:0,done:false,motion:0,running:false,demo:true});ui.flash('样篮已就位，可以重新备篾');}
+function bmReset(st,ui){st.generation++;Object.assign(st,{step:0,progress:0,done:false,motion:0,running:false,demo:true,manualPractice:null});ui.flash('样篮已就位，可以重新备篾');}
 const ui=mountFigure({fig:'02',turn:'full',title:'道明竹编 · 慈竹提篮',size:[100,82,63],palette:'mint',state:{step:0,progress:0,done:false,explode:0,motion:0,running:false,demo:true,generation:0},scene:bmScene,
  stats:st=>[{label:'完成工序',value:st.step+' / 4'}],readout:st=>st.demo?'样篮陈列':st.done?'提篮已成':bmSteps[Math.min(3,st.step)],buttonsLabel:'竹编工序',
  buttons:bmSteps.map((label,i)=>({label,onClick:(st,u)=>bmRun(i,st,u)})).concat({label:'重新制作',onClick:bmReset}),
  params:(st,q)=>{if(q.has('step')){st.step=Math.max(0,Math.min(4,parseInt(q.get('step'))||0));st.progress=st.step/4;st.done=st.step===4;st.demo=false;}st.explode=bmClamp(+q.get('explode')||0);}});
 window.heritageUI=ui;window.heritageId='bamboo';xrMount(()=>ui,()=> '');
-</script><script src="../assets/figure-bridge.js"></script></body></html>
+</script><script src="../assets/figure-bridge.js?rev=studio3"></script></body></html>
