@@ -1,8 +1,8 @@
 {
   "name": "shu-craft-lab",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "engines": {"node": ">=20"},
-  "scripts": {"dev": "node scripts/serve.mjs", "preview:pages": "node scripts/serve.mjs --base-path /shu-craft-lab/", "check": "node scripts/check.mjs"}
+  "scripts": {"dev": "node scripts/serve.mjs", "preview:pages": "node scripts/serve.mjs --base-path /shu-craft-lab/", "check": "node scripts/check.mjs", "check:browser": "node scripts/verify-classroom.mjs"}
 }

@@ -1,5 +1,5 @@
 // QA only. Run "node scripts/verify-figures.mjs xiu lantern" from any directory.
-// Without scene names, all five scenes are rendered. Add "--out-dir <dir>" to
+// Without scene names, all six scenes are rendered. Add "--out-dir <dir>" to
 // override qa/. Install sharp locally, or use the bundled Codex Node/Sharp runtime.
 // This contact sheet tests the actual scene geometry, camera, and painter ordering.
 // Browser integration, choreography and the optional wobble filter are tested separately.
@@ -17,7 +17,7 @@ const project = path.resolve(path.dirname(script), '..');
 const figures = new Map([
   ['jin', 'Shu brocade loom'], ['xiu', 'Shu embroidery'],
   ['bamboo', 'Daoming bamboo basket'], ['lantern', 'Zigong lotus lantern'],
-  ['print', 'Mianzhu woodblock print'],
+  ['print', 'Mianzhu woodblock print'], ['lacquer', 'Chengdu lacquerware'],
 ]);
 const angles = [[45, 35.264], [110, 35.264], [170, 35.264], [230, 35.264],
   [300, 35.264], [20, 62], [200, 70]];

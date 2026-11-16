@@ -36,8 +36,8 @@ for(const file of walk(path.join(project,'scripts')).filter(file=>file.endsWith(
 }
 const content={window:{}};
 vm.runInNewContext(fs.readFileSync(path.join(root,'assets/content.js'),'utf8'),content);
-const ids=['jin','xiu','bamboo','print','lantern'];
-if(content.window.CRAFTS.length!==5)throw Error('Expected five craft lessons');
+const ids=['jin','xiu','bamboo','print','lantern','lacquer'];
+if(content.window.CRAFTS.length!==ids.length)throw Error('Expected six craft lessons');
 for(const id of ids){
   const lesson=content.window.CRAFTS.find(c=>c.id===id);
   if(!lesson||lesson.steps.length!==4||!lesson.quiz.options[lesson.quiz.answer])throw Error('Invalid lesson: '+id);
@@ -45,4 +45,4 @@ for(const id of ids){
   if(!html.includes('heritageUI')||!html.includes('figure-bridge.js'))throw Error('Scene integration missing: '+id);
 }
 checkSceneFlows(project,ids);
-console.log(`Passed: ${files.length} website files, ${scripts} browser JavaScript programs, ${references} case-sensitive local references, Node scripts and five scene integrations.`);
+console.log(`Passed: ${files.length} website files, ${scripts} browser JavaScript programs, ${references} case-sensitive local references, Node scripts and ${ids.length} scene integrations.`);

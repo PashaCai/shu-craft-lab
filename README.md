@@ -1,6 +1,6 @@
 # 蜀作 · 非遗互动工坊
 
-使用 April Zhu 的 Colorfigures 绘图引擎与原创四川非遗模型，展示蜀锦、蜀绣、道明竹编、绵竹木版年画及自贡彩灯。
+使用 April Zhu 的 Colorfigures 绘图引擎与原创四川非遗模型，展示蜀锦、蜀绣、道明竹编、绵竹木版年画、自贡彩灯及成都漆艺。
 
 ## 部署到 GitHub Pages
 
@@ -13,7 +13,7 @@
 3. **Branch** 选择 **gh-pages**，目录选择 **/ (root)**，点击 **Save**。
 4. 等待 GitHub Pages 发布完成，从 Settings → Pages 打开站点。预期地址为 `https://pashacai.github.io/shu-craft-lab/`，以 GitHub 实际发布结果为准。
 
-网站路径均为相对路径。五个工坊以 `#jin`、`#xiu`、`#bamboo`、`#print`、`#lantern` 切换，支持刷新和分享直达链接。后续更新时，把 `dist/` 中的全部内容同步到 `gh-pages` 根目录即可，保留 `.nojekyll`。
+网站路径均为相对路径。六个工坊以 `#jin`、`#xiu`、`#bamboo`、`#print`、`#lantern`、`#lacquer` 切换，支持刷新和分享直达链接。后续更新时，把 `dist/` 中的全部内容同步到 `gh-pages` 根目录即可，保留 `.nojekyll`。
 
 如果使用“纯静态网页包”在自己的新仓库部署：解压后直接上传 `index.html`、`assets/`、`figures/` 和 `.nojekyll`，不要再套 `dist` 或其他外层目录；发布分支选择实际上传文件的分支（如 `main`）和 `/ (root)`。
 
@@ -39,12 +39,20 @@ GitHub 仍会运行平台内部的 Pages 发布任务。直接发布分支不需
 
 ## 操作
 
-- 左侧选择工坊，画布左上按四道工序制作；完成后收藏到学习手记。
+- 从工坊目录选择手艺，画布左上按四道工序制作；完成后收藏到学习手记。
 - 拖动画布旋转，滚轮或缩放按钮缩放；支持方向键、自动旋转及正面复位。
 - 透视外层、显示部件标签、动画拆解与组装。
 - 五种配色、手绘线条强度、课堂演示模式。
 - 读懂它：文化背景、结构观察任务、交互问答、官方资料。
 - 学习记录只保存在当前浏览器；支持导出学习手记和已完成作品的 SVG。
+
+## 漆器工坊与展示柜
+
+进入 [成都漆艺](https://pashacai.github.io/shu-craft-lab/#lacquer)，可选碗、瓶、盒、盘，更换漆色和纹样，完成四道工序后将不同成品加入[漆器展示柜](https://pashacai.github.io/shu-craft-lab/#cabinet)。学习手记延用原来的存储位置。展柜把教学样品和学生自己的习作分开标记。
+
+在展柜选择实物采集，将单件器物放在对比明显的素色背景前，让器口朝上，尽量从正面拍，全器入镜；也可以直接选择照片。检查识别的轮廓、器形和颜色，命名并确认后再入柜。相机需要浏览器许可及 HTTPS 或 localhost；图片处理在当前设备完成，不需要 API 密钥。作品是依照正面轮廓生成的可旋转插画，不会测量真实尺寸、复原背面纹饰或判定文物真伪。学生展品保存在当前浏览器，换设备、清理网站数据或无痕浏览可能丢失。
+
+成都木胎漆器为髹饰工艺，与陶瓷入窑高温烧成不同。教学依据：[中国非物质文化遗产网 · 成都漆艺传承人谈工序](https://www.ihchina.cn/project_details/20698.html)。
 
 ## 内容边界
 
@@ -52,12 +60,14 @@ GitHub 仍会运行平台内部的 Pages 发布任务。直接发布分支不需
 
 ## 署名
 
-Colorfigures by April Zhu: https://april-zhu.com/colorfigures 。基于原引擎适配了中文标签的字号和宽度，许可证见 `dist/assets/COLORFIGURES-LICENSE.txt`。五个工坊模型与本站界面为本项目编写。
+Colorfigures by April Zhu: https://april-zhu.com/colorfigures 。基于原引擎适配了中文标签的字号和宽度，许可证见 `dist/assets/COLORFIGURES-LICENSE.txt`。六个工坊模型与本站界面为本项目编写。
 
 ## 验证
 
-`npm run check` 检查浏览器及 Node 脚本语法、本地资源的大小写与相对路径、五个课程内容及场景接入，并实际运行每个场景的四道制作工序，验证跳步、重复点击和制作中重置。该检查不依赖第三方包，在本地运行，不影响静态发布。
+`npm run check` 检查浏览器及 Node 脚本语法、本地资源的大小写与相对路径、六个课程内容及场景接入，并实际运行每个场景的四道制作工序，验证跳步、重复点击和制作中重置。该检查不依赖第三方包，在本地运行，不影响静态发布。
 
 `node scripts/verify-figures.mjs` 是可选的几何验收：调用可用的 Sharp 或 Codex 自带运行时，为每个工坊生成 7 个角度的常规及透视拆解联系表，保存在 `qa/`。如没有 Sharp，可先运行 `npm install --no-save --package-lock=false sharp`；此依赖仅用于开发验收，线上网站与部署检查不需要它。浏览器另行检查制作、收藏、问答、课堂模式、手机布局与导出。
 
-交付包包含 `验收报告.md` 和 `SHA256SUMS.txt`。不包含原部署平台配置、Git 历史、凭据、学生记录、node_modules 或验收图片。
+可选运行 `npm run check:browser`（Playwright + Chromium/Edge），回归六个工坊、旧手记、SVG 导出、手机布局与展柜，使用模拟视频验证拍摄、相机释放、权限拒绝和相册导入。使用 Python 3 运行 `python scripts/package.py` 可生成纯静态网页包及源码包。
+
+源码交付包包含 `验收报告.md` 和 `SHA256SUMS.txt`。不包含原部署平台配置、Git 历史、凭据、学生记录、node_modules 或验收图片。
